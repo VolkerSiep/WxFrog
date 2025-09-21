@@ -28,6 +28,7 @@ class Controller:
 
     def _on_model_run(self):
         # TODO: get input from gui
-        parameters = {}
+        from pint import Quantity
+        parameters = {"x": Quantity(3, "m**3/h")}
         result = self.model.run_engine(parameters)
         self.frame.canvas.update_result(result)

@@ -6,7 +6,7 @@ class Canvas(wx.ScrolledWindow):
     def __init__(self, parent, config: Configuration):
         super().__init__(parent)
         self.config = config
-        self.result_labels = []
+        self._result_labels = []
 
         # configure bg picture and adapt virtual size
         self.svg_bg = config.get_svg(config["bg_picture_name"])
@@ -18,9 +18,26 @@ class Canvas(wx.ScrolledWindow):
         self.SetScrollRate(50, 50)
 
         self.Bind(wx.EVT_PAINT, self.on_paint)
-        self.Bind(wx.EVT_MOUSEWHEEL, self.on_mousewheel)
+        self.Bind(wx.EVT_MOUSEWHEEL, self._on_mousewheel)
+        self.Bind(wx.EVT_LEFT_DOWN, self._on_left_click)
 
-    def on_mousewheel(self, event: wx.MouseEvent):
+    def _on_left_click(self, event: wx.MouseEvent):
+        pos = event.GetPosition()
+        for item in self._result_labels:
+            if item["hitbox"].Contains(pos):
+                print(item["label"])
+                # TODO: process e.g. by asking for values for other scenarios
+                #  .. fire this as an event to controller, including mouse
+                #     position and path. Controller then calls back to show
+                #     tooltip with values for each scenario.
+        # todo: go through input fields (once they are included).
+        #  on hit, fire event to controller, who then asks to open a
+        #  local mini dialog to enter a new value or select from another
+        #  scenario. For this, the controller asks the model for the values of
+        #  the other scenarios.
+
+
+    def _on_mousewheel(self, event: wx.MouseEvent):
         if event.ShiftDown():
             # Shift + wheel → horizontal scroll
             delta = event.GetWheelRotation()
@@ -37,22 +54,18 @@ class Canvas(wx.ScrolledWindow):
         self.svg_bg.RenderToGC(gc, size=self.bg_size)
 
         font = wx.Font(
-            self.config["result_font_size"],
-            wx.FONTFAMILY_DEFAULT,
-            wx.FONTSTYLE_NORMAL,
-            wx.FONTWEIGHT_NORMAL,
-            False  # underline?
-        )
+            self.config["result_font_size"], wx.FONTFAMILY_DEFAULT,
+            wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False)
 
+        # draw calculated properties
         gc.SetFont(font, wx.Colour(0, 0, 0))
+        for e in self._result_labels:
+            gc.DrawText(e["label"], *e["pos"])
+            if "hitbox" not in e:
+                extent = gc.GetFullTextExtent(e["label"])[:2]
+                size = wx.Size(int(extent[0]), int(extent[1]))
+                e["hitbox"] = wx.Rect(wx.Point(*e["pos"]), size)
 
-        for item in self.result_labels:
-            gc.DrawText(item["label"], *item["pos"])
-
-        # custom annotations (just for illustration)
-        gc.SetBrush(wx.Brush("red"))
-        gc.SetPen(wx.Pen("red", 2))
-        gc.DrawEllipse(100, 100, 40, 40)
 
     def on_paint(self, event):
         dc = wx.PaintDC(self)
@@ -76,14 +89,15 @@ class Canvas(wx.ScrolledWindow):
         bmp.SaveFile(path, wx.BITMAP_TYPE_PNG)
 
     def update_result(self, result: dict):
-        self.result_labels = []
+        self._result_labels = []
         for item in self.config["results"]:
             unit = item["unit_of_measurement"]
             q = result
             for p in item["path"]:
                 q = q[p]
-            self.result_labels.append({
+            self._result_labels.append({
                 "pos": item["position"],
+                "path": item["path"],
                 "label": item["format_str"].format(q.to(unit))
             })
         self.Refresh()
