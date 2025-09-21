@@ -1,0 +1,47 @@
+app_name: "WX-Frog example application"
+frame_initial_size: [800, 500]
+
+bg_picture_name: bg_picture.svg
+bg_picture_width: 2000
+result_font_size: 10
+
+results:
+  - path: ["y"]
+    unit_of_measurement: bar
+    position: [300, 200]
+    format_str: "y = {:.2f~}"
+  - path: ["z"]
+    unit_of_measurement: degC
+    position: [300, 230]
+    format_str: "z = {:.2f~}"
+
+inputs:
+  - path: ["x"]
+    position: [300, 270]
+    unit_of_measurement: m**3 / h
+    format_str: "x = {:.2f~}"
+    min: 100.0
+    max: 400.0
+
+tables:
+  - name: Stream table
+    columns:
+      - label: S01
+        path: ["streams", "s01"]
+      - label: S02
+        path: ["streams", "s02"]
+    props:
+      - label: T
+        unit: degC
+        path: ["T"]
+        format_str: "{:.2f~}"
+      - label: p
+        unit: bar
+        path: ["p"]
+        format_str: "{:.3f~}"
+
+
+
+
+
+

@@ -1,0 +1,6 @@
+.idea/
+sandbox
+
+__pycache__
+*.egg-info
+
