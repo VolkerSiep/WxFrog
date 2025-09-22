@@ -1,5 +1,9 @@
+from typing import Any
+from collections.abc import Sequence, Mapping
+
 import wx
 from src.wxfrog.config import Configuration
+from ..engine import NestedQualityMap
 
 
 class Canvas(wx.ScrolledWindow):
@@ -7,6 +11,7 @@ class Canvas(wx.ScrolledWindow):
         super().__init__(parent)
         self.config = config
         self._result_labels = []
+        self._parameter_labels = []
 
         # configure bg picture and adapt virtual size
         self.svg_bg = config.get_svg(config["bg_picture_name"])
@@ -30,6 +35,11 @@ class Canvas(wx.ScrolledWindow):
                 #  .. fire this as an event to controller, including mouse
                 #     position and path. Controller then calls back to show
                 #     tooltip with values for each scenario.
+
+        for item in self._parameter_labels:
+            if item["hitbox"].Contains(pos):
+                print(item["label"])
+
         # todo: go through input fields (once they are included).
         #  on hit, fire event to controller, who then asks to open a
         #  local mini dialog to enter a new value or select from another
@@ -51,21 +61,26 @@ class Canvas(wx.ScrolledWindow):
 
     def draw_content(self, gc: wx.GraphicsContext):
         """Draw the SVG and all overlays onto the given GraphicsContext."""
+        def draw_labels(which):
+            for e in which:
+                gc.DrawText(e["label"], *e["pos"])
+                if "hitbox" not in e:
+                    extent = gc.GetFullTextExtent(e["label"])[:2]
+                    size = wx.Size(int(extent[0]), int(extent[1]))
+                    e["hitbox"] = wx.Rect(wx.Point(*e["pos"]), size)
+
+
         self.svg_bg.RenderToGC(gc, size=self.bg_size)
 
+
+        # draw calculated properties
         font = wx.Font(
             self.config["result_font_size"], wx.FONTFAMILY_DEFAULT,
             wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False)
-
-        # draw calculated properties
         gc.SetFont(font, wx.Colour(0, 0, 0))
-        for e in self._result_labels:
-            gc.DrawText(e["label"], *e["pos"])
-            if "hitbox" not in e:
-                extent = gc.GetFullTextExtent(e["label"])[:2]
-                size = wx.Size(int(extent[0]), int(extent[1]))
-                e["hitbox"] = wx.Rect(wx.Point(*e["pos"]), size)
-
+        draw_labels(self._result_labels)
+        gc.SetFont(font.Bold(), wx.Colour(80, 80, 255))
+        draw_labels(self._parameter_labels)
 
     def on_paint(self, event):
         dc = wx.PaintDC(self)
@@ -88,16 +103,23 @@ class Canvas(wx.ScrolledWindow):
         mdc.SelectObject(wx.NullBitmap)
         bmp.SaveFile(path, wx.BITMAP_TYPE_PNG)
 
-    def update_result(self, result: dict):
-        self._result_labels = []
-        for item in self.config["results"]:
-            unit = item["unit_of_measurement"]
-            q = result
+    def update_result(self, values: NestedQualityMap):
+        self._result_labels = self._entries(values, "results")
+        self.Refresh()
+
+    def update_parameters(self, values: NestedQualityMap):
+        self._parameter_labels = self._entries(values, "parameters")
+        self.Refresh()
+
+    def _entries(self, values: NestedQualityMap, which: str):
+        def e(item):
+            unit = item["uom"]
+            q = values
             for p in item["path"]:
                 q = q[p]
-            self._result_labels.append({
-                "pos": item["position"],
-                "path": item["path"],
-                "label": item["format_str"].format(q.to(unit))
-            })
-        self.Refresh()
+            res = {"label": item["fmt"].format(q.to(unit))}
+            excluded = ["uom", "fmt"]
+            res.update({k: v for k, v in item.items() if k not in excluded})
+            return res
+
+        return [e(item) for item in self.config[which]]

@@ -7,19 +7,19 @@ result_font_size: 10
 
 results:
   - path: ["y"]
-    unit_of_measurement: bar
-    position: [300, 200]
-    format_str: "y = {:.2f~}"
+    uom: bar
+    pos: [300, 200]
+    fmt: "y = {:.2f~#P}"
   - path: ["z"]
-    unit_of_measurement: degC
-    position: [300, 230]
-    format_str: "z = {:.2f~}"
+    uom: degC
+    pos: [300, 230]
+    fmt: "z = {:.2f~#P}"
 
-inputs:
+parameters:
   - path: ["x"]
-    position: [300, 270]
-    unit_of_measurement: m**3 / h
-    format_str: "x = {:.2f~}"
+    pos: [300, 270]
+    uom: m**3 / h
+    fmt: "x = {:.2f~#P}"
     min: 100.0
     max: 400.0
 
@@ -32,13 +32,13 @@ tables:
         path: ["streams", "s02"]
     props:
       - label: T
-        unit: degC
+        uom: degC
         path: ["T"]
-        format_str: "{:.2f~}"
+        fmt: "{:.2f~#P}"
       - label: p
-        unit: bar
+        uom: bar
         path: ["p"]
-        format_str: "{:.3f~}"
+        fmt: "{:.3f~#P}"
 
 
 

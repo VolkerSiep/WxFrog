@@ -4,7 +4,6 @@ from yaml import safe_load
 
 from wx.svg import SVGimage
 
-from .engine import CalculationEngine
 
 class Configuration(dict):
     def __init__(self, config_dir: Traversable):

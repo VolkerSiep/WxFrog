@@ -17,6 +17,9 @@ class Controller:
 
         self.model = Model(model)
         self.frame = FrogFrame(self.configuration)
+
+        self.frame.canvas.update_parameters(self.model.default_parameters)
+
         self.frame.Show()
 
     def _on_export_canvas_gfx(self):
