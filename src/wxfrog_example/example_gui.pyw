@@ -12,10 +12,10 @@ class MyModel(CalculationEngine):
         pass
 
     def get_default_parameters(self):
-        return {"x": Quantity(3, "m**3/h")}
+        return {"a": {"b": {"x": Quantity(3, "m**3/h")}}}
 
     def calculate(self, parameters: dict) -> dict:
-        x = parameters["x"]
+        x = parameters["a"]["b"]["x"]
         c = Quantity(0.1, "bar*h/m**3")
         p1 = Quantity(30, "bar")
         p2 = p1 - c * x

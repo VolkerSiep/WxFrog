@@ -1,9 +1,15 @@
+from collections.abc import Mapping
 from typing import Any
-from collections.abc import Sequence, Mapping
+from pint import Quantity
 
 import wx
+from pubsub.pub import sendMessage
+
 from src.wxfrog.config import Configuration
-from ..engine import NestedQualityMap
+from ..events import SHOW_PARAMETER_IN_CANVAS
+from ..engine import DataStructure
+from .parameter import ParameterDialog
+from .colors import INPUT_BLUE
 
 
 class Canvas(wx.ScrolledWindow):
@@ -27,7 +33,8 @@ class Canvas(wx.ScrolledWindow):
         self.Bind(wx.EVT_LEFT_DOWN, self._on_left_click)
 
     def _on_left_click(self, event: wx.MouseEvent):
-        pos = event.GetPosition()
+        pos = self._get_pos(event.GetPosition())
+
         for item in self._result_labels:
             if item["hitbox"].Contains(pos):
                 print(item["label"])
@@ -38,7 +45,7 @@ class Canvas(wx.ScrolledWindow):
 
         for item in self._parameter_labels:
             if item["hitbox"].Contains(pos):
-                print(item["label"])
+                sendMessage(SHOW_PARAMETER_IN_CANVAS, item=item)
 
         # todo: go through input fields (once they are included).
         #  on hit, fire event to controller, who then asks to open a
@@ -79,7 +86,7 @@ class Canvas(wx.ScrolledWindow):
             wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False)
         gc.SetFont(font, wx.Colour(0, 0, 0))
         draw_labels(self._result_labels)
-        gc.SetFont(font.Bold(), wx.Colour(80, 80, 255))
+        gc.SetFont(font.Bold(), INPUT_BLUE)
         draw_labels(self._parameter_labels)
 
     def on_paint(self, event):
@@ -87,6 +94,14 @@ class Canvas(wx.ScrolledWindow):
         self.PrepareDC(dc)
         gc = wx.GraphicsContext.Create(dc)
         self.draw_content(gc)
+
+    def _get_pos(self, view_pos: wx.Point) -> wx.Point:
+        """The position on the virtual canvas is the view position added to
+        the view start, which is wisely expressed not in pixels, but in
+        scroll pixels per unit - why make it easy?"""
+        vx, vy = self.GetViewStart()
+        sx, sy = self.GetScrollPixelsPerUnit()
+        return wx.Point(vx * sx + view_pos[0], vy * sy + view_pos[1])
 
     # ---- Export method ----
     def save_as_png(self, path: str):
@@ -103,23 +118,28 @@ class Canvas(wx.ScrolledWindow):
         mdc.SelectObject(wx.NullBitmap)
         bmp.SaveFile(path, wx.BITMAP_TYPE_PNG)
 
-    def update_result(self, values: NestedQualityMap):
+    def update_result(self, values: DataStructure):
         self._result_labels = self._entries(values, "results")
         self.Refresh()
 
-    def update_parameters(self, values: NestedQualityMap):
+    def update_parameters(self, values: DataStructure):
         self._parameter_labels = self._entries(values, "parameters")
         self.Refresh()
 
-    def _entries(self, values: NestedQualityMap, which: str):
+    def _entries(self, values: DataStructure, which: str):
         def e(item):
             unit = item["uom"]
-            q = values
-            for p in item["path"]:
-                q = q[p]
+            q = values.get(item["path"])
             res = {"label": item["fmt"].format(q.to(unit))}
             excluded = ["uom", "fmt"]
             res.update({k: v for k, v in item.items() if k not in excluded})
             return res
 
         return [e(item) for item in self.config[which]]
+
+    def show_parameter_dialog(self, item: Mapping[str, Any], value: Quantity):
+        dialog = ParameterDialog(self, item, value)
+        dialog.Bind(wx.EVT_KILL_FOCUS, lambda e: print("x"))
+        dialog.ShowModal()
+        return None  # need to do this event based, if dialog is not modal.
+        # return dialog.get_value() if dialog.ShowModal() == wx.ID_OK else None

@@ -16,7 +16,7 @@ results:
     fmt: "z = {:.2f~#P}"
 
 parameters:
-  - path: ["x"]
+  - path: ["a", "b", "x"]
     pos: [300, 270]
     uom: m**3 / h
     fmt: "x = {:.2f~#P}"

@@ -47,3 +47,4 @@ class FrogFrame(wx.Frame):
             return path if path.lower().endswith(".png") else f"{path}.png"
         else:
             return None
+
