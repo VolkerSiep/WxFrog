@@ -3,10 +3,10 @@ from typing import Union
 from collections.abc import Mapping, Sequence
 from pint import Quantity
 
-NestedQualityMap = Mapping[str, Union[Quantity, "NestedQualityMap"]]
+NestedQuantityMap = Mapping[str, Union[Quantity, "NestedQualityMap"]]
 
 
-class DataStructure(dict, NestedQualityMap):
+class DataStructure(dict, NestedQuantityMap):
     def get(self, path: Sequence[str]):
         res = self
         for p in path:
@@ -24,10 +24,10 @@ class CalculationEngine(ABC):
         ...
 
     @abstractmethod
-    def get_default_parameters(self) -> NestedQualityMap:
+    def get_default_parameters(self) -> NestedQuantityMap:
         ...
 
     @abstractmethod
-    def calculate(self, parameters: NestedQualityMap) -> NestedQualityMap:
+    def calculate(self, parameters: NestedQuantityMap) -> NestedQuantityMap:
         ...
 

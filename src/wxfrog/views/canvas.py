@@ -1,4 +1,4 @@
-from collections.abc import Mapping
+from collections.abc import Mapping, Set
 from typing import Any
 from pint import Quantity
 
@@ -133,12 +133,15 @@ class Canvas(wx.ScrolledWindow):
             res = {"label": item["fmt"].format(q.to(unit))}
             excluded = ["uom", "fmt"]
             res.update({k: v for k, v in item.items() if k not in excluded})
+            if "name" not in res:
+                res["name"] = ".".join(item["path"])
             return res
 
         return [e(item) for item in self.config[which]]
 
-    def show_parameter_dialog(self, item: Mapping[str, Any], value: Quantity):
-        dialog = ParameterDialog(self, item, value)
+    def show_parameter_dialog(self, item: Mapping[str, Any], value: Quantity,
+                              units: Set[str]):
+        dialog = ParameterDialog(self, item, value, units)
         dialog.Bind(wx.EVT_KILL_FOCUS, lambda e: print("x"))
         dialog.ShowModal()
         return None  # need to do this event based, if dialog is not modal.
