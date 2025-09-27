@@ -128,9 +128,8 @@ class Canvas(wx.ScrolledWindow):
 
     def _entries(self, values: DataStructure, which: str):
         def e(item):
-            unit = item["uom"]
             q = values.get(item["path"])
-            res = {"label": item["fmt"].format(q.to(unit))}
+            res = {"label": item["fmt"].format(q)}
             res.update(item)
             if "name" not in res:
                 res["name"] = ".".join(item["path"])

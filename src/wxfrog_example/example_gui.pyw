@@ -1,15 +1,19 @@
 from importlib.resources import files
 from time import sleep
 from pint import Quantity
+from sys import stdout
 
 from src.wxfrog import main, CalculationEngine
 
-PAUSE_SECONDS = 0
+PAUSE_SECONDS = 2
 
 
 class MyModel(CalculationEngine):
-    def initialise(self):
-        pass
+    def __init__(self):
+        self.outstream = stdout
+
+    def initialise(self, out_stream):
+        self.outstream = out_stream
 
     def get_default_parameters(self):
         return {"a": {"b": {"x": Quantity(3, "m**3/h")}}}
@@ -19,7 +23,10 @@ class MyModel(CalculationEngine):
         c = Quantity(0.1, "bar*h/m**3")
         p1 = Quantity(30, "bar")
         p2 = p1 - c * x
-        sleep(PAUSE_SECONDS)
+        for i in range(10):
+            sleep(PAUSE_SECONDS)
+            print(f"Iteration {i} .. still doing nothing.", file=self.outstream)
+        print(f"Now returning some fake values", file=self.outstream)
         return {"y": Quantity(p2, "bar"),
                 "z": Quantity(43.425, "degC"),
                 "streams": {"s01": {"T": Quantity(20, "degC"),

@@ -3,6 +3,7 @@ import wx
 
 from ..config import Configuration
 from .canvas import Canvas
+from .engine_monitor import EngineMonitor
 from ..events import EXPORT_CANVAS_GFX, RUN_MODEL
 
 _FD_STYLE_LOAD = wx.FD_OPEN | wx.FD_FILE_MUST_EXIST
@@ -10,12 +11,14 @@ _FD_STYLE_SAVE = wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT | wx.FD_CHANGE_DIR
 
 
 class FrogFrame(wx.Frame):
-    def __init__(self, config: Configuration):
+    def __init__(self, config: Configuration, out_stream):
         self.config = config
         super().__init__(None, title=config["app_name"],
                          size=wx.Size(*config["frame_initial_size"]))
         self.canvas = Canvas(self, self.config)
         self.define_menu()
+
+        self.monitor = EngineMonitor(self, out_stream)
 
         # hack, just to prevent that window can be sized far too big.
         #  it's a shame that wx doesn't support better control.
@@ -33,7 +36,9 @@ class FrogFrame(wx.Frame):
         run_menu = wx.Menu()
         item = run_menu.Append(wx.ID_ANY, "Run model","Run model in background")
         self.Bind(wx.EVT_MENU, lambda e: sendMessage(RUN_MODEL), item)
-        menu_bar.Append(run_menu, "&Run")
+        item = run_menu.Append(wx.ID_ANY, "Show Monitor","Show engine monitor")
+        self.Bind(wx.EVT_MENU, lambda e: self.monitor.Show(), item)
+        menu_bar.Append(run_menu, "&Engine")
 
 
         self.SetMenuBar(menu_bar)

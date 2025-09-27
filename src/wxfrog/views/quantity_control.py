@@ -2,10 +2,11 @@ from collections.abc import Collection
 
 import wx
 from wx.lib.newevent import NewCommandEvent
-from pint import Quantity, Unit
+from pint import (Quantity, Unit, DimensionalityError, DefinitionSyntaxError,
+                  UndefinedUnitError)
 
 from ..utils import fmt_unit
-from .colors import ERROR_RED
+from .colors import ERROR_RED, LIGHT_GREY
 
 
 # create a new custom event class
@@ -14,6 +15,8 @@ NewUnitDefinedEvent, EVT_UNIT_DEFINED = NewCommandEvent()
 
 
 class QuantityCtrl(wx.Window):
+    ERROR_SHOW_DURATION = 1500  # ms
+
     def __init__(self, parent, value: Quantity, units: Collection[str],
                  max_value: float = None, min_value: float = None):
         super().__init__(parent)
@@ -38,11 +41,20 @@ class QuantityCtrl(wx.Window):
             self, label="\N{LINK SYMBOL}", style=wx.BU_EXACTFIT)
         self.link_ctrl.SetValue(True)
 
+        # status bar
+        font = wx.Font(8, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL,
+                       wx.FONTWEIGHT_NORMAL)
+        self.status = wx.StaticText(self, label="")
+        self.status.SetFont(font)
+
+        sizer_1 = wx.BoxSizer(wx.VERTICAL)
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.magnitude_ctrl, 1, wx.EXPAND | wx.ALL, 3)
         sizer.Add(self.unit_ctrl, 0, wx.EXPAND | wx.ALL, 3)
         sizer.Add(self.link_ctrl, 0, wx.ALIGN_CENTER_VERTICAL, 3)
-        self.SetSizer(sizer)
+        sizer_1.Add(sizer, 0, wx.EXPAND)
+        sizer_1.Add(self.status, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 2)
+        self.SetSizer(sizer_1)
 
         self.unit_ctrl.Bind(wx.EVT_TEXT_ENTER, self._on_unit_changed)
         self.unit_ctrl.Bind(wx.EVT_COMBOBOX, self._on_unit_changed)
@@ -51,17 +63,29 @@ class QuantityCtrl(wx.Window):
 
     def _on_unit_changed(self, event):
         orig_bg = self.unit_ctrl.GetBackgroundColour()
+        def show_error(message):
+            self.status.SetLabelText(message)
+            self.status.SetForegroundColour(ERROR_RED)
+            self.unit_ctrl.SetBackgroundColour(ERROR_RED)
+            wx.CallLater(self.ERROR_SHOW_DURATION, reset)
+
         def reset():
             self.unit_ctrl.SetBackgroundColour(orig_bg)
             self.unit_ctrl.SetValue(fmt_unit(self.value.u))
+            self.status.SetLabelText("You can do this!")
+            self.status.SetForegroundColour(LIGHT_GREY)
 
         candidate = event.GetString()
         try:
             new_value = self.value.to(candidate)
-        except Exception:  # can throw many different kinds unfortunately
-            # even AssertionError for instance if candidate == "m/"
-            self.unit_ctrl.SetBackgroundColour(ERROR_RED)
-            wx.CallLater(1000, reset)
+        except DimensionalityError:
+            show_error("Incompatible dimension")
+            return
+        except (DefinitionSyntaxError, AssertionError):
+            show_error("Unit syntax error")
+            return
+        except UndefinedUnitError:
+            show_error("Undefined unit")
             return
 
         # add unit to set if it doesn't exist yet
@@ -80,20 +104,29 @@ class QuantityCtrl(wx.Window):
         if self.link_ctrl.GetValue():
             self.value = new_value
             self.magnitude_ctrl.SetValue(f"{self.value.m:.7g}")
+        else:
+            self.value = Quantity(self.value.m, cand_fmt)
 
         self._fire_change_event()
 
     def _on_magnitude_changed(self, event):
         orig_bg = self.magnitude_ctrl.GetBackgroundColour()
+        def show_error(message):
+            self.status.SetLabelText(message)
+            self.status.SetForegroundColour(ERROR_RED)
+            self.magnitude_ctrl.SetBackgroundColour(ERROR_RED)
+            wx.CallLater(self.ERROR_SHOW_DURATION, reset)
+
         def reset():
             self.magnitude_ctrl.SetBackgroundColour(orig_bg)
             self.magnitude_ctrl.SetValue(f"{self.value.m:.7g}")
+            self.status.SetForegroundColour(LIGHT_GREY)
+            self.status.SetLabelText("You can do this!")
 
         try:
             new_value = float(self.magnitude_ctrl.GetValue())
         except ValueError:
-            self.magnitude_ctrl.SetBackgroundColour(ERROR_RED)
-            wx.CallLater(1000, reset)
+            show_error("Invalid number format")
             return
 
         self.value = Quantity(new_value, self.value.u)

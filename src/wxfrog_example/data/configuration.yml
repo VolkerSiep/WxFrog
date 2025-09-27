@@ -9,17 +9,17 @@ results:
   - path: ["y"]
     uom: bar
     pos: [300, 200]
-    fmt: "y = {:.2f~#P}"
+    fmt: "y = {:.2f~P}"
   - path: ["z"]
     uom: degC
     pos: [300, 230]
-    fmt: "z = {:.2f~#P}"
+    fmt: "z = {:.2f~P}"
 
 parameters:
   - path: ["a", "b", "x"]
     pos: [300, 270]
-    uom: barrel/day
-    fmt: "x = {:.2f~#P}"
+    uom: ft^3/s
+    fmt: "x = {:.2f~P}"
     min: 100.0
     max: 400.0
     # name: Karl Heinz  # optional
@@ -35,11 +35,11 @@ tables:
       - label: T
         uom: degC
         path: ["T"]
-        fmt: "{:.2f~#P}"
+        fmt: "{:.2f~P}"
       - label: p
         uom: bar
         path: ["p"]
-        fmt: "{:.3f~#P}"
+        fmt: "{:.3f~P}"
 
 units:
   # all units that can be used

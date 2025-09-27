@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Union
 from collections.abc import Mapping, Sequence
+from io import TextIOBase
 from pint import Quantity
 
 NestedQuantityMap = Mapping[str, Union[Quantity, "NestedQualityMap"]]
@@ -20,7 +21,7 @@ class DataStructure(dict, NestedQuantityMap):
 
 class CalculationEngine(ABC):
     @abstractmethod
-    def initialise(self):
+    def initialise(self, out_stream: TextIOBase):
         ...
 
     @abstractmethod
