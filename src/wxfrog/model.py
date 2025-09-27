@@ -1,13 +1,10 @@
-from collections.abc import Set, Sequence
+from collections.abc import Set
 from pint import Unit
 
-from .engine import (
-    CalculationEngine, DataStructure, Quantity, NestedQuantityMap)
+from .utils import fmt_unit
+from .engine import CalculationEngine, DataStructure, Quantity
 from .config import Configuration
 
-def fmt_unit(unit: Unit):
-    result = f"{unit:~}"
-    return result.replace(" ", "")
 
 class Model:
     def __init__(self, engine: CalculationEngine, configuration: Configuration):
@@ -31,6 +28,9 @@ class Model:
     def compatible_units(self, value: Quantity) -> Set[str]:
         result = {u for u in self._all_units if value.is_compatible_with(u)}
         return result | {fmt_unit(value.u)}
+
+    def register_unit(self, unit):
+        self._all_units.add(fmt_unit(Unit(unit)))
 
     def _initial_parameters(self) -> DataStructure:
         param = DataStructure(self._engine.get_default_parameters())

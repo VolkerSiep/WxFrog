@@ -1,0 +1,7 @@
+# just to shut up pycharm ... requirements.txt is not used / useful for anything else
+
+wxpython
+pyyaml
+pint
+pypubsub
+pytest

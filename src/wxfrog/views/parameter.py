@@ -1,23 +1,43 @@
+from pubsub import pub
+from pint import Quantity
 import wx
-from .colors import INPUT_BLUE, LIGHT_GREY
+
+from ..events import NEW_UNIT_DEFINED
+
+from .quantity_control import (
+    QuantityCtrl, EVT_QUANTITY_CHANGED, EVT_UNIT_DEFINED)
+
 
 class ParameterDialog(wx.Dialog):
     def __init__(self, parent: wx.Window, item, value, units):
         super().__init__(parent, title=item['name'])
-        # self.Bind(wx.EVT_ACTIVATE,
-        #           lambda e: self.Destroy() if not e.GetActive() else None)
+        sizer_1 = wx.BoxSizer(wx.VERTICAL)
+        q_ctrl = QuantityCtrl(self, value, units)
+        sizer_1.Add(q_ctrl, 0, wx.EXPAND | wx.ALL, 3)
 
-        panel = wx.Panel(self)
-        panel.SetBackgroundColour(LIGHT_GREY)
+        sizer_2 = wx.BoxSizer(wx.HORIZONTAL)
+        cancel = wx.Button(self, label="Cancel")
+        ok = wx.Button(self, label="OK")
+        sizer_2.Add(cancel, 0, wx.ALL, 3)
+        sizer_2.AddStretchSpacer(1)
+        sizer_2.Add(ok, 0, wx.ALL, 3)
+        sizer_1.Add(sizer_2, 0, wx.EXPAND|wx.ALL, 3)
+        self.SetSizer(sizer_1)
+        self.Fit()
 
-        print(value, units)
+        q_ctrl.Bind(EVT_QUANTITY_CHANGED, self._qty_changed)
+        q_ctrl.Bind(EVT_UNIT_DEFINED, self._new_unit_defined)
+        ok.Bind(wx.EVT_BUTTON, lambda e: self.EndModal(wx.ID_OK))
+        cancel.Bind(wx.EVT_BUTTON, lambda e: self.EndModal(wx.ID_CANCEL))
+        self._value = value
 
-        # TODO:
-        #  - make dialog with value and unit
-        #  - maybe maintain a list with predefined units and offer them in
-        #    a combobox if they are compatible. But also allow adding own
-        #    unit. If own unit is successful, add it to list of pre-known units.
+    @property
+    def value(self) -> Quantity:
+        return self._value
 
+    def _qty_changed(self, event):
+        self._value = event.new_value
 
-        # text = wx.StaticText(panel, label=title, pos=(10, 10))
-        # text.SetForegroundColour(INPUT_BLUE)
+    @staticmethod
+    def _new_unit_defined(event):
+        pub.sendMessage(NEW_UNIT_DEFINED, unit=event.new_unit)

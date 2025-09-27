@@ -5,7 +5,8 @@ from .engine import CalculationEngine
 from .views.frame import FrogFrame
 from .model import Model
 from .config import Configuration
-from .events import EXPORT_CANVAS_GFX, RUN_MODEL, SHOW_PARAMETER_IN_CANVAS
+from .events import (EXPORT_CANVAS_GFX, RUN_MODEL, SHOW_PARAMETER_IN_CANVAS,
+                     NEW_UNIT_DEFINED)
 
 class Controller:
     def __init__(self, config_directory: Traversable, model: CalculationEngine):
@@ -15,6 +16,7 @@ class Controller:
         pub.subscribe(self._on_export_canvas_gfx, EXPORT_CANVAS_GFX)
         pub.subscribe(self._on_model_run, RUN_MODEL)
         pub.subscribe(self._on_show_parameter, SHOW_PARAMETER_IN_CANVAS)
+        pub.subscribe(self._on_new_unit_defined, NEW_UNIT_DEFINED)
 
         self.model = Model(model, self.configuration)
         self.frame = FrogFrame(self.configuration)
@@ -41,3 +43,5 @@ class Controller:
             param.set(item["path"], new_value)
             self.frame.canvas.update(param)
 
+    def _on_new_unit_defined(self, unit: str):
+        self.model.register_unit(unit)

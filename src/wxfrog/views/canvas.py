@@ -131,8 +131,7 @@ class Canvas(wx.ScrolledWindow):
             unit = item["uom"]
             q = values.get(item["path"])
             res = {"label": item["fmt"].format(q.to(unit))}
-            excluded = ["uom", "fmt"]
-            res.update({k: v for k, v in item.items() if k not in excluded})
+            res.update(item)
             if "name" not in res:
                 res["name"] = ".".join(item["path"])
             return res
@@ -143,6 +142,4 @@ class Canvas(wx.ScrolledWindow):
                               units: Set[str]):
         dialog = ParameterDialog(self, item, value, units)
         dialog.Bind(wx.EVT_KILL_FOCUS, lambda e: print("x"))
-        dialog.ShowModal()
-        return None  # need to do this event based, if dialog is not modal.
-        # return dialog.get_value() if dialog.ShowModal() == wx.ID_OK else None
+        return dialog.value if dialog.ShowModal() == wx.ID_OK else None
