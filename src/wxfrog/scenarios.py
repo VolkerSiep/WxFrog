@@ -1,0 +1,3 @@
+SCENARIO_DEFAULT = "Default"
+SCENARIO_CURRENT = "Current"
+SCENARIO_LAST_CONVERGED = "Last Converged"

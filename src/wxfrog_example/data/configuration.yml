@@ -18,7 +18,7 @@ results:
 parameters:
   - path: ["a", "b", "x"]
     pos: [300, 270]
-    uom: ft^3/s
+    uom: m^3/h
     fmt: "x = {:.2f~P}"
     min: 100.0
     max: 400.0

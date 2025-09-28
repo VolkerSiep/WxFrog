@@ -18,7 +18,7 @@ class QuantityCtrl(wx.Window):
     ERROR_SHOW_DURATION = 1500  # ms
 
     def __init__(self, parent, value: Quantity, units: Collection[str],
-                 max_value: float = None, min_value: float = None):
+                 min_value: float = None, max_value: float = None):
         super().__init__(parent)
         value_str = f"{value.m:.7g}"
         unit_str = fmt_unit(value.u)
@@ -136,4 +136,21 @@ class QuantityCtrl(wx.Window):
         evt = QuantityChangedEvent(self.GetId())
         evt.SetEventObject(self)
         evt.new_value = self.value
+        evt.in_bounds = self._check_bounds()
         wx.PostEvent(self, evt)
+
+    def _check_bounds(self) -> bool:
+        value, v_min, v_max = self.value, self.min, self.max
+        in_bounds = True if v_min is None else (v_min <= value)
+        in_bounds &= True if v_max is None else (value <= v_max)
+        if in_bounds:
+            self.status.SetLabelText("")
+            self.status.SetForegroundColour(LIGHT_GREY)
+        else:
+            ## oo looks way better than \N{INFINITY}, which is too small.
+            min_fmt = "-oo" if v_min is None else f"{v_min.to(value.u):.6g~P}"
+            max_fmt = "oo" if v_max is None else f"{v_max.to(value.u):.6g~P}"
+            msg = f"Value out of bounds: [{min_fmt}, {max_fmt}]"
+            self.status.SetLabelText(msg)
+            self.status.SetForegroundColour(ERROR_RED)
+        return in_bounds

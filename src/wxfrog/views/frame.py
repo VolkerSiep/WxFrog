@@ -1,8 +1,10 @@
+from collections.abc import Collection
 from pubsub.pub import sendMessage
 import wx
 
-from ..config import Configuration
+from ..config import Configuration, ConfigurationError
 from .canvas import Canvas
+from .config_error_dialog import ConfigErrorDialog
 from .engine_monitor import EngineMonitor
 from ..events import EXPORT_CANVAS_GFX, RUN_MODEL
 
@@ -53,3 +55,9 @@ class FrogFrame(wx.Frame):
         else:
             return None
 
+
+    def show_config_error_dialog(self, errors: Collection[ConfigurationError]):
+        dialog = ConfigErrorDialog(self, errors)
+        dialog.ShowModal()
+        self.Close()
+        # wx.GetApp().ExitMainLoop()

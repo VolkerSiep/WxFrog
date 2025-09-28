@@ -12,5 +12,6 @@ class WxFrogApp(wx.App):
 
 def main(config_directory: Traversable, model: CalculationEngine):
     app = WxFrogApp()
-    _ = Controller(config_directory, model)
+    controller = Controller(config_directory, model)
+    app.SetTopWindow(controller.frame)
     app.MainLoop()

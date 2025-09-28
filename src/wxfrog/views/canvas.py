@@ -47,23 +47,14 @@ class Canvas(wx.ScrolledWindow):
             if item["hitbox"].Contains(pos):
                 sendMessage(SHOW_PARAMETER_IN_CANVAS, item=item)
 
-        # todo: go through input fields (once they are included).
-        #  on hit, fire event to controller, who then asks to open a
-        #  local mini dialog to enter a new value or select from another
-        #  scenario. For this, the controller asks the model for the values of
-        #  the other scenarios.
-
-
     def _on_mousewheel(self, event: wx.MouseEvent):
-        if event.ShiftDown():
-            # Shift + wheel → horizontal scroll
+        if event.ShiftDown(): # horizontal scroll
             delta = event.GetWheelRotation()
-            # positive delta = wheel up → scroll left (negative)
+            # positive delta = wheel up -> scroll left (negative)
             units = self.GetScrollPixelsPerUnit()[0]
             x, y = self.GetViewStart()
             self.Scroll(x - int(delta / event.GetWheelDelta()), y)
-        else:
-            # default vertical behaviour
+        else:  # default vertical scroll
             event.Skip()
 
     def draw_content(self, gc: wx.GraphicsContext):
@@ -76,9 +67,7 @@ class Canvas(wx.ScrolledWindow):
                     size = wx.Size(int(extent[0]), int(extent[1]))
                     e["hitbox"] = wx.Rect(wx.Point(*e["pos"]), size)
 
-
         self.svg_bg.RenderToGC(gc, size=self.bg_size)
-
 
         # draw calculated properties
         font = wx.Font(

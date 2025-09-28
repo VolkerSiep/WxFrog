@@ -1,6 +1,6 @@
 from importlib.resources.abc import Traversable
 from pubsub import pub
-from pint import Quantity
+import wx
 
 from .engine import CalculationEngine
 from .views.frame import FrogFrame
@@ -23,6 +23,7 @@ class Controller:
 
         self.model = Model(model, self.configuration)
         self.frame = FrogFrame(self.configuration, self.model.out_stream)
+        self.model.initialise_engine()
         self.frame.Show()
 
     def _on_export_canvas_gfx(self):
@@ -39,7 +40,10 @@ class Controller:
         self.frame.canvas.update_result(result)
 
     def _on_initialisation_done(self):
-        self.model.finalize_initialisation()
+        errors = self.model.finalize_initialisation()
+        if errors:
+            wx.CallAfter(self.frame.show_config_error_dialog, errors)
+
         self.frame.canvas.update_parameters(self.model.parameters)
 
 

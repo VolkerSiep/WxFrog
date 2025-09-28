@@ -1,15 +1,17 @@
-import io
-from collections.abc import Set
+from collections.abc import Set, Collection
 from io import TextIOBase, StringIO
 from threading import Thread, Lock
-from time import sleep
-from pint import Unit
+from pint import (Unit, DimensionalityError, DefinitionSyntaxError,
+                  UndefinedUnitError)
 from pubsub import pub
 
 from .utils import fmt_unit
 from .engine import CalculationEngine, DataStructure, Quantity
-from .config import Configuration
-from .events import INITIALIZATION_DONE, CALCULATION_DONE
+from .config import (
+    Configuration, ConfigurationError, ParameterNotFound, UnitSyntaxError,
+    UndefinedUnit, UnitConversionError, OutOfBounds)
+
+from .events import (INITIALIZATION_DONE, CALCULATION_DONE)
 
 
 class ThreadedStringIO(TextIOBase):
@@ -43,25 +45,23 @@ class Model:
         self._configuration = configuration
         self._engine = engine
         self.out_stream = ThreadedStringIO()
-        self._parameters = DataStructure()
         self._all_units = set()
+        self._parameters = DataStructure()
         self._results = {}
 
+    def initialise_engine(self):
         def f():
-            print("Initialising model", file=self.out_stream)
             self._engine.initialise(self.out_stream)
-
-            # pause necessary or else callback can be processed before
-            # constructor returns with model object.
-            sleep(0.1)
             pub.sendMessage(INITIALIZATION_DONE)
 
         Thread(target=f).start()
 
-    def finalize_initialisation(self):
-        self._parameters = self._initial_parameters()
+    def finalize_initialisation(self) -> Collection[ConfigurationError]:
+        self._parameters = DataStructure(self._engine.get_default_parameters())
+        errors = self._initialize_parameters(self._parameters)
         self._all_units = {fmt_unit(Unit(u))
                            for u in self._configuration["units"]}
+        return errors
 
     @property
     def parameters(self) -> DataStructure:
@@ -84,11 +84,32 @@ class Model:
     def register_unit(self, unit):
         self._all_units.add(fmt_unit(Unit(unit)))
 
-    def _initial_parameters(self) -> DataStructure:
-        param = DataStructure(self._engine.get_default_parameters())
+    def _initialize_parameters(self, param: DataStructure
+                               ) -> Collection[ConfigurationError]:
+        errors = []
         for item in self._configuration["parameters"]:
             path = item["path"]
-            param.set(path, param.get(path).to(item["uom"]))
-        return param
-
-
+            try:
+                v = param.get(path)
+            except KeyError:
+                errors.append(ParameterNotFound(path))
+                continue
+            try:
+                param.set(path, v.to(item["uom"]))
+            except (DefinitionSyntaxError, AssertionError):
+                errors.append(UnitSyntaxError(path, item["uom"]))
+                continue
+            except UndefinedUnitError:
+                errors.append(UndefinedUnit(path, item["uom"]))
+                continue
+            except DimensionalityError:
+                errors.append(UnitConversionError(path, fmt_unit(v.u),
+                                                  item["uom"]))
+                continue
+            v = param.get(path)
+            i_min, i_max = item["min"], item["max"]
+            if i_max is not None and v > (v_max := Quantity(i_max, v.u)):
+                errors.append(OutOfBounds(path, v, v_max, True))
+            elif i_min is not None and v < (v_min := Quantity(i_min, v.u)):
+                errors.append(OutOfBounds(path, v, v_min, False))
+        return errors
