@@ -7,12 +7,13 @@ from pint import (Unit, DimensionalityError, DefinitionSyntaxError,
 from pubsub import pub
 
 from .utils import fmt_unit, ThreadedStringIO
-from .engine import CalculationEngine, DataStructure, Quantity
+from .engine import (
+    CalculationEngine, DataStructure, Quantity, CalculationFailed)
 from .config import (
     Configuration, ConfigurationError, ParameterNotFound, UnitSyntaxError,
     UndefinedUnit, UnitConversionError, OutOfBounds)
 
-from .events import (INITIALIZATION_DONE, CALCULATION_DONE)
+from .events import (INITIALIZATION_DONE, CALCULATION_DONE, CALCULATION_FAILED)
 from .scenarios import SCENARIO_DEFAULT, SCENARIO_CURRENT
 
 class Model:
@@ -58,9 +59,13 @@ class Model:
         param = self._parameters[SCENARIO_CURRENT]
 
         def f():
-            results = DataStructure(self._engine.calculate(param))
-            self._results[SCENARIO_CURRENT] = results
-            pub.sendMessage(CALCULATION_DONE, result=results)
+            try:
+                results = DataStructure(self._engine.calculate(param))
+            except CalculationFailed as error:
+                pub.sendMessage(CALCULATION_FAILED, message=str(error))
+            else:
+                self._results[SCENARIO_CURRENT] = results
+                pub.sendMessage(CALCULATION_DONE, result=results)
 
         Thread(target=f).start()
 

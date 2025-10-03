@@ -19,10 +19,19 @@ class DataStructure(dict, NestedQuantityMap):
         node[path[-1]] = value
 
 
+class CalculationFailed(ValueError):
+    pass
+
 class CalculationEngine(ABC):
     @abstractmethod
     def initialise(self, out_stream: TextIOBase):
         ...
+
+    def get_internal_state(self) -> str:
+        pass
+
+    def set_internal_state(self, state: str):
+        pass
 
     @abstractmethod
     def get_default_parameters(self) -> NestedQuantityMap:

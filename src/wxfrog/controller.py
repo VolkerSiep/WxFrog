@@ -9,7 +9,7 @@ from .config import Configuration
 from .events import (
     EXPORT_CANVAS_GFX, RUN_MODEL, SHOW_PARAMETER_IN_CANVAS, NEW_UNIT_DEFINED,
     INITIALIZATION_DONE, CALCULATION_DONE, OPEN_SCENARIOS, OPEN_FILE, SAFE_FILE,
-    SAFE_FILE_AS, EXIT_APP)
+    SAFE_FILE_AS, EXIT_APP, RUN_CASE_STUDY, CALCULATION_FAILED)
 
 
 class Controller:
@@ -28,6 +28,8 @@ class Controller:
         pub.subscribe(self._on_save_file, SAFE_FILE)
         pub.subscribe(self._on_save_file_as, SAFE_FILE_AS)
         pub.subscribe(self._on_exit_app, EXIT_APP)
+        pub.subscribe(self._on_run_case_study, RUN_CASE_STUDY)
+        pub.subscribe(self._on_calculation_failed, CALCULATION_FAILED)
 
         self.model = Model(model, self.configuration)
         self.frame = FrogFrame(self.configuration, self.model.out_stream)
@@ -46,6 +48,9 @@ class Controller:
 
     def _on_calculation_done(self, result):
         self.frame.canvas.update_result(result)
+
+    def _on_calculation_failed(self, message):
+        self.frame.show_calculation_error(message)
 
     def _on_initialisation_done(self):
         errors = self.model.finalize_initialisation()
@@ -69,6 +74,9 @@ class Controller:
     def _on_exit_app(self, event):
         print(EXIT_APP)
         event.Skip()
+
+    def _on_run_case_study(self):
+        print(RUN_CASE_STUDY)
 
     def _on_show_parameter(self, item):
         param = self.model.parameters()

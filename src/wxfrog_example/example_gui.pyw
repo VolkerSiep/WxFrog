@@ -3,7 +3,7 @@ from time import sleep
 from pint import Quantity
 from sys import stdout
 
-from src.wxfrog import main, CalculationEngine
+from wxfrog import main, CalculationEngine, CalculationFailed
 
 PAUSE_SECONDS = 0.2
 
@@ -20,6 +20,8 @@ class MyModel(CalculationEngine):
 
     def calculate(self, parameters: dict) -> dict:
         x = parameters["a"]["b"]["x"]
+        if x < Quantity(1.5, "m^3/h"):
+            raise CalculationFailed("Too little flow")
         c = Quantity(0.1, "bar*h/m**3")
         p1 = Quantity(30, "bar")
         p2 = p1 - c * x

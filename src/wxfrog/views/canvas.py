@@ -9,14 +9,19 @@ from src.wxfrog.config import Configuration
 from ..events import SHOW_PARAMETER_IN_CANVAS
 from ..engine import DataStructure
 from .parameter import ParameterDialog
-from .colors import INPUT_BLUE
+from .colors import INPUT_BLUE, BLACK, ERROR_RED, LIGHT_GREY
 
 
 class Canvas(wx.ScrolledWindow):
+    RESULT_VALID = 0
+    RESULT_INVALID = 1
+    RESULT_ERROR = 2
+
     def __init__(self, parent: wx.Window, config: Configuration):
         super().__init__(parent)
         self.config = config
         self._result_labels = []
+        self._results_mode = False
         self._parameter_labels = []
 
         # configure bg picture and adapt virtual size
@@ -73,7 +78,11 @@ class Canvas(wx.ScrolledWindow):
         font = wx.Font(
             self.config["result_font_size"], wx.FONTFAMILY_DEFAULT,
             wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False)
-        gc.SetFont(font, wx.Colour(0, 0, 0))
+        color = {self.RESULT_INVALID: LIGHT_GREY,
+                 self.RESULT_VALID: BLACK,
+                 self.RESULT_ERROR: ERROR_RED}[self._results_mode]
+
+        gc.SetFont(font, color)
         draw_labels(self._result_labels)
         gc.SetFont(font.Bold(), INPUT_BLUE)
         draw_labels(self._parameter_labels)
@@ -108,6 +117,7 @@ class Canvas(wx.ScrolledWindow):
         bmp.SaveFile(path, wx.BITMAP_TYPE_PNG)
 
     def update_result(self, values: DataStructure):
+        self.set_results_mode(self.RESULT_VALID)
         self._result_labels = self._entries(values, "results")
         self.Refresh()
 
@@ -130,4 +140,11 @@ class Canvas(wx.ScrolledWindow):
                               units: Set[str]):
         dialog = ParameterDialog(self, item, value, units)
         dialog.Bind(wx.EVT_KILL_FOCUS, lambda e: print("x"))
-        return dialog.value if dialog.ShowModal() == wx.ID_OK else None
+        if dialog.ShowModal() == wx.ID_OK:
+            if self._results_mode == self.RESULT_VALID:
+                self.set_results_mode(self.RESULT_INVALID)
+            return dialog.value
+        return None
+
+    def set_results_mode(self, mode: int):
+        self._results_mode = mode
