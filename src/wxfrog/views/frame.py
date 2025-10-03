@@ -6,14 +6,17 @@ from ..config import Configuration, ConfigurationError
 from .canvas import Canvas
 from .config_error_dialog import ConfigErrorDialog
 from .engine_monitor import EngineMonitor
-from ..events import EXPORT_CANVAS_GFX, RUN_MODEL
+from ..events import (
+    EXPORT_CANVAS_GFX, RUN_MODEL, OPEN_SCENARIOS, OPEN_FILE, SAFE_FILE,
+    SAFE_FILE_AS, EXIT_APP)
+from ..utils import ThreadedStringIO
 
 _FD_STYLE_LOAD = wx.FD_OPEN | wx.FD_FILE_MUST_EXIST
 _FD_STYLE_SAVE = wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT | wx.FD_CHANGE_DIR
 
 
 class FrogFrame(wx.Frame):
-    def __init__(self, config: Configuration, out_stream):
+    def __init__(self, config: Configuration, out_stream: ThreadedStringIO):
         self.config = config
         super().__init__(None, title=config["app_name"],
                          size=wx.Size(*config["frame_initial_size"]))
@@ -31,8 +34,23 @@ class FrogFrame(wx.Frame):
         menu_bar = wx.MenuBar()
 
         file_menu = wx.Menu()
-        item = file_menu.Append(wx.ID_ANY, "Export","Export canvas as png")
+        item = file_menu.Append(wx.ID_ANY, "Open", "Open file")
+        self.Bind(wx.EVT_MENU, lambda e: sendMessage(OPEN_FILE), item)
+        item = file_menu.Append(wx.ID_ANY, "Save", "Save file")
+        self.Bind(wx.EVT_MENU, lambda e: sendMessage(SAFE_FILE), item)
+        item = file_menu.Append(wx.ID_ANY, "Save As ...",
+                                "Save file with another name")
+        self.Bind(wx.EVT_MENU, lambda e: sendMessage(SAFE_FILE_AS), item)
+
+        item = file_menu.Append(wx.ID_ANY, "Scenarios ...", "Manage Scenarios")
+        self.Bind(wx.EVT_MENU, lambda e: sendMessage(OPEN_SCENARIOS), item)
+
+        item = file_menu.Append(wx.ID_ANY, "Export canvas ...",
+                                "Export canvas as png")
         self.Bind(wx.EVT_MENU, lambda e: sendMessage(EXPORT_CANVAS_GFX), item)
+        item = file_menu.Append(wx.ID_ANY, "Exit", "Exit simulator")
+        self.Bind(wx.EVT_MENU, lambda e: self.Close())
+
         menu_bar.Append(file_menu, "&File")
 
         run_menu = wx.Menu()
@@ -41,6 +59,8 @@ class FrogFrame(wx.Frame):
         item = run_menu.Append(wx.ID_ANY, "Show Monitor","Show engine monitor")
         self.Bind(wx.EVT_MENU, lambda e: self.monitor.Show(), item)
         menu_bar.Append(run_menu, "&Engine")
+
+        self.Bind(wx.EVT_CLOSE, lambda e: sendMessage(EXIT_APP, event=e))
 
 
         self.SetMenuBar(menu_bar)

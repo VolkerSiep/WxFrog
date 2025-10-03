@@ -13,7 +13,7 @@ from .colors import INPUT_BLUE
 
 
 class Canvas(wx.ScrolledWindow):
-    def __init__(self, parent, config: Configuration):
+    def __init__(self, parent: wx.Window, config: Configuration):
         super().__init__(parent)
         self.config = config
         self._result_labels = []

@@ -1,4 +1,5 @@
 import wx
+from ..utils import ThreadedStringIO
 
 class WatchTimer(wx.Timer):
     def __init__(self, owner, check_interval):
@@ -9,7 +10,7 @@ class WatchTimer(wx.Timer):
 class EngineMonitor(wx.Dialog):
     CHECK_INTERVAL = 1000  # ms
 
-    def __init__(self, parent, out_stream):
+    def __init__(self, parent: wx.Window, out_stream: ThreadedStringIO):
         style = wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER
         super().__init__(parent, title="Engine monitor", style=style)
         self.out_stream = out_stream

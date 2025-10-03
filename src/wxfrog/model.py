@@ -1,44 +1,19 @@
 from collections.abc import Set, Collection
-from io import TextIOBase, StringIO
-from threading import Thread, Lock
+from threading import Thread
+from copy import deepcopy
+
 from pint import (Unit, DimensionalityError, DefinitionSyntaxError,
                   UndefinedUnitError)
 from pubsub import pub
 
-from .utils import fmt_unit
+from .utils import fmt_unit, ThreadedStringIO
 from .engine import CalculationEngine, DataStructure, Quantity
 from .config import (
     Configuration, ConfigurationError, ParameterNotFound, UnitSyntaxError,
     UndefinedUnit, UnitConversionError, OutOfBounds)
 
 from .events import (INITIALIZATION_DONE, CALCULATION_DONE)
-
-
-class ThreadedStringIO(TextIOBase):
-    def __init__(self):
-        super().__init__()
-        self._buf = StringIO()
-        self._lock = Lock()
-        self._buf_new = StringIO()
-
-    def write(self, s):
-        with self._lock:
-            self._buf_new.write(s)
-            return self._buf.write(s)
-
-    def getvalue(self):
-        with self._lock:
-            return self._buf.getvalue()
-
-    def get_recent(self):
-        with self._lock:
-            result = self._buf_new.getvalue()
-            self._buf_new = StringIO()
-            return result
-
-    def flush(self):
-        pass
-
+from .scenarios import SCENARIO_DEFAULT, SCENARIO_CURRENT
 
 class Model:
     def __init__(self, engine: CalculationEngine, configuration: Configuration):
@@ -46,7 +21,7 @@ class Model:
         self._engine = engine
         self.out_stream = ThreadedStringIO()
         self._all_units = set()
-        self._parameters = DataStructure()
+        self._parameters = {SCENARIO_DEFAULT: DataStructure()}
         self._results = {}
 
     def initialise_engine(self):
@@ -57,23 +32,35 @@ class Model:
         Thread(target=f).start()
 
     def finalize_initialisation(self) -> Collection[ConfigurationError]:
-        self._parameters = DataStructure(self._engine.get_default_parameters())
-        errors = self._initialize_parameters(self._parameters)
+        default_params = DataStructure(self._engine.get_default_parameters())
+        self._parameters = {SCENARIO_DEFAULT: default_params}
+        self.copy_parameters(SCENARIO_DEFAULT, SCENARIO_CURRENT)
+        errors = self._initialize_parameters(default_params)
         self._all_units = {fmt_unit(Unit(u))
                            for u in self._configuration["units"]}
         return errors
 
-    @property
-    def parameters(self) -> DataStructure:
+    def parameters(self, which: str = SCENARIO_CURRENT) -> DataStructure:
         """This parameter structure will be updated by the controller directly
         """
-        return self._parameters
+        return self._parameters[which]
+
+    def copy_parameters(self, source: str, target: str):
+        self._parameters[target] = deepcopy(self._parameters[source])
+
+    def copy_results(self, source: str, target: str):
+        self._results[target] = deepcopy(self._results[source])
+
+    def scenarios(self) -> Collection[str]:
+        return self._parameters.keys()
 
     def run_engine(self):
-        param = self.parameters
+        param = self._parameters[SCENARIO_CURRENT]
+
         def f():
-            self._results = DataStructure(self._engine.calculate(param))
-            pub.sendMessage(CALCULATION_DONE, result=self._results)
+            results = DataStructure(self._engine.calculate(param))
+            self._results[SCENARIO_CURRENT] = results
+            pub.sendMessage(CALCULATION_DONE, result=results)
 
         Thread(target=f).start()
 

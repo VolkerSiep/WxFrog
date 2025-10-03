@@ -20,8 +20,8 @@ parameters:
     pos: [300, 270]
     uom: m^3/h
     fmt: "x = {:.2f~P}"
-    min: 100.0
-    max: 400.0
+    min: 1.0
+    max: 4.0
     # name: Karl Heinz  # optional
 
 tables:
