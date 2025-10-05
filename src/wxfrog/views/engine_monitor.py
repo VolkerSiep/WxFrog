@@ -29,4 +29,6 @@ class EngineMonitor(wx.Dialog):
     def _on_timer(self, event):
         new_text = self.out_stream.get_recent()
         if new_text:
-            self.text.SetValue(self.text.GetValue() + new_text)
+            new_value = self.text.GetValue() + new_text
+            self.text.SetValue(new_value)
+            self.text.ShowPosition(len(new_value) - 1)

@@ -116,7 +116,7 @@ class Canvas(wx.ScrolledWindow):
         mdc.SelectObject(wx.NullBitmap)
         bmp.SaveFile(path, wx.BITMAP_TYPE_PNG)
 
-    def update_result(self, values: DataStructure):
+    def update_results(self, values: DataStructure):
         self.set_results_mode(self.RESULT_VALID)
         self._result_labels = self._entries(values, "results")
         self.Refresh()

@@ -2,10 +2,12 @@ from collections.abc import Collection
 from pubsub.pub import sendMessage
 import wx
 
+from .colors import DARK_GREY
 from ..config import Configuration, ConfigurationError
 from .canvas import Canvas
 from .config_error_dialog import ConfigErrorDialog
 from .engine_monitor import EngineMonitor
+from .scenario import ScenarioManager
 from ..events import (
     EXPORT_CANVAS_GFX, RUN_MODEL, OPEN_SCENARIOS, OPEN_FILE, SAFE_FILE,
     SAFE_FILE_AS, EXIT_APP, RUN_CASE_STUDY)
@@ -26,6 +28,7 @@ class FrogFrame(wx.Frame):
         self.define_menu()
 
         self.monitor = EngineMonitor(self, out_stream)
+        self.scenarios = ScenarioManager(self)
 
         # hack, just to prevent that window can be sized far too big.
         #  it's a shame that wx doesn't support better control.
@@ -36,31 +39,35 @@ class FrogFrame(wx.Frame):
         menu_bar = wx.MenuBar()
 
         file_menu = wx.Menu()
-        item = file_menu.Append(wx.ID_ANY, "Open", "Open file")
+        item = file_menu.Append(wx.ID_ANY, "&Open\tCTRL+o", "Open file")
         self.Bind(wx.EVT_MENU, lambda e: sendMessage(OPEN_FILE), item)
-        item = file_menu.Append(wx.ID_ANY, "Save", "Save file")
+        item = file_menu.Append(wx.ID_ANY, "&Save\tCTRL+s", "Save file")
         self.Bind(wx.EVT_MENU, lambda e: sendMessage(SAFE_FILE), item)
-        item = file_menu.Append(wx.ID_ANY, "Save As ...",
+        item = file_menu.Append(wx.ID_ANY, "Save &As ...\tCTRL+w",
                                 "Save file with another name")
         self.Bind(wx.EVT_MENU, lambda e: sendMessage(SAFE_FILE_AS), item)
-        item = file_menu.Append(wx.ID_ANY, "Export canvas ...",
+        item = file_menu.Append(wx.ID_ANY, "&Export canvas ...\tCTRL+g",
                                 "Export canvas as png")
         self.Bind(wx.EVT_MENU, lambda e: sendMessage(EXPORT_CANVAS_GFX), item)
-        item = file_menu.Append(wx.ID_ANY, "Exit", "Exit simulator")
+        item = file_menu.Append(wx.ID_ANY, "E&xit\tCTRL+x", "Exit simulator")
         self.Bind(wx.EVT_MENU, lambda e: self.Close())
         menu_bar.Append(file_menu, "&File")
 
         run_menu = wx.Menu()
-        item = run_menu.Append(wx.ID_ANY, "Run model","Run model in background")
+        item = run_menu.Append(wx.ID_ANY, "&Run model\tCTRL+r",
+                               "Run model in background")
         self.Bind(wx.EVT_MENU, lambda e: sendMessage(RUN_MODEL), item)
-        item = run_menu.Append(wx.ID_ANY, "Show Monitor","Show engine monitor")
+        item = run_menu.Append(wx.ID_ANY, "&Show Monitor\tCTRL+e",
+                               "Show engine monitor")
         self.Bind(wx.EVT_MENU, lambda e: self.monitor.Show(), item)
         menu_bar.Append(run_menu, "&Engine")
 
         tools_menu = wx.Menu()
-        item = tools_menu.Append(wx.ID_ANY, "Scenarios ...", "Manage Scenarios")
+        item = tools_menu.Append(wx.ID_ANY, "&Scenarios ...\tCTRL+m",
+                                 "Manage Scenarios")
         self.Bind(wx.EVT_MENU, lambda e: sendMessage(OPEN_SCENARIOS), item)
-        item = tools_menu.Append(wx.ID_ANY, "Case study ...", "Run case study")
+        item = tools_menu.Append(wx.ID_ANY, "&Case study ...\tCTRL+c",
+                                 "Run case study")
         self.Bind(wx.EVT_MENU, lambda e: sendMessage(RUN_CASE_STUDY), item)
         menu_bar.Append(tools_menu, "&Tools")
 
@@ -77,8 +84,6 @@ class FrogFrame(wx.Frame):
         if dialog.ShowModal() == wx.ID_YES:
             self.monitor.Show()
 
-
-
     def show_file_dialog(self, msg: str, wildcard: str, save: bool):
         style = _FD_STYLE_SAVE if save else _FD_STYLE_LOAD
         dialog = wx.FileDialog(self, msg, wildcard=wildcard, style=style)
@@ -92,3 +97,5 @@ class FrogFrame(wx.Frame):
         dialog = ConfigErrorDialog(self, errors)
         dialog.ShowModal()
         self.Close()
+
+

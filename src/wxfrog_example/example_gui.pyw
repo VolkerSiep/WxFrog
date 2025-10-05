@@ -5,7 +5,7 @@ from sys import stdout
 
 from wxfrog import main, CalculationEngine, CalculationFailed
 
-PAUSE_SECONDS = 0.2
+PAUSE_SECONDS = 1
 
 
 class MyModel(CalculationEngine):

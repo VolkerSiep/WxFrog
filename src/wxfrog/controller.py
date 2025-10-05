@@ -10,6 +10,7 @@ from .events import (
     EXPORT_CANVAS_GFX, RUN_MODEL, SHOW_PARAMETER_IN_CANVAS, NEW_UNIT_DEFINED,
     INITIALIZATION_DONE, CALCULATION_DONE, OPEN_SCENARIOS, OPEN_FILE, SAFE_FILE,
     SAFE_FILE_AS, EXIT_APP, RUN_CASE_STUDY, CALCULATION_FAILED)
+from .scenarios import SCENARIO_CURRENT
 
 
 class Controller:
@@ -17,19 +18,21 @@ class Controller:
         self.configuration = Configuration(config_directory)
 
         # event subscriptions
-        pub.subscribe(self._on_export_canvas_gfx, EXPORT_CANVAS_GFX)
-        pub.subscribe(self._on_model_run, RUN_MODEL)
-        pub.subscribe(self._on_show_parameter, SHOW_PARAMETER_IN_CANVAS)
-        pub.subscribe(self._on_new_unit_defined, NEW_UNIT_DEFINED)
-        pub.subscribe(self._on_initialisation_done, INITIALIZATION_DONE)
-        pub.subscribe(self._on_calculation_done, CALCULATION_DONE)
-        pub.subscribe(self._on_open_scenarios, OPEN_SCENARIOS)
-        pub.subscribe(self._on_open_file, OPEN_FILE)
-        pub.subscribe(self._on_save_file, SAFE_FILE)
-        pub.subscribe(self._on_save_file_as, SAFE_FILE_AS)
-        pub.subscribe(self._on_exit_app, EXIT_APP)
-        pub.subscribe(self._on_run_case_study, RUN_CASE_STUDY)
-        pub.subscribe(self._on_calculation_failed, CALCULATION_FAILED)
+        events = {EXPORT_CANVAS_GFX: self._on_export_canvas_gfx,
+                  RUN_MODEL: self._on_model_run,
+                  SHOW_PARAMETER_IN_CANVAS: self._on_show_parameter,
+                  NEW_UNIT_DEFINED: self._on_new_unit_defined,
+                  INITIALIZATION_DONE: self._on_initialisation_done,
+                  CALCULATION_DONE: self._on_calculation_done,
+                  OPEN_SCENARIOS: self._on_open_scenarios,
+                  OPEN_FILE: self._on_open_file, SAFE_FILE: self._on_save_file,
+                  SAFE_FILE_AS: self._on_save_file_as,
+                  EXIT_APP: self._on_exit_app,
+                  RUN_CASE_STUDY: self._on_run_case_study,
+                  CALCULATION_FAILED: self._on_calculation_failed}
+
+        for evt_id, callback in events.items():
+            pub.subscribe(callback, evt_id)
 
         self.model = Model(model, self.configuration)
         self.frame = FrogFrame(self.configuration, self.model.out_stream)
@@ -46,8 +49,9 @@ class Controller:
     def _on_model_run(self):
         self.model.run_engine()
 
-    def _on_calculation_done(self, result):
-        self.frame.canvas.update_result(result)
+    def _on_calculation_done(self):
+        self._update_results()
+        self._update_scenarios()
 
     def _on_calculation_failed(self, message):
         self.frame.show_calculation_error(message)
@@ -56,14 +60,19 @@ class Controller:
         errors = self.model.finalize_initialisation()
         if errors:
             wx.CallAfter(self.frame.show_config_error_dialog, errors)
-
-        self.frame.canvas.update_parameters(self.model.parameters())
+        wx.CallAfter(self._update_parameters)
+        if self.configuration["run_engine_on_start"]:
+            self.model.run_engine()
 
     def _on_open_scenarios(self):
-        print(OPEN_SCENARIOS)
+        self._update_scenarios()
+        self.frame.scenarios.Show()
 
     def _on_open_file(self):
         print(OPEN_FILE)
+        self._update_parameters()
+        self._update_results()
+        self._update_scenarios()
 
     def _on_save_file(self):
         print(SAFE_FILE)
@@ -79,13 +88,29 @@ class Controller:
         print(RUN_CASE_STUDY)
 
     def _on_show_parameter(self, item):
-        param = self.model.parameters()
+        param = self.model.scenarios[SCENARIO_CURRENT].parameters
         value = param.get(item["path"])
         units = self.model.compatible_units(value)
         new_value = self.frame.canvas.show_parameter_dialog(item, value, units)
         if new_value is not None and new_value != value:
             param.set(item["path"], new_value)
-            self.frame.canvas.update_parameters(self.model.parameters())
+            self.frame.canvas.update_parameters(param)
 
     def _on_new_unit_defined(self, unit: str):
         self.model.register_unit(unit)
+
+    # non-event standard workflows, triggered by events
+
+    def _update_parameters(self):
+        self.frame.canvas.update_parameters(
+            self.model.scenarios[SCENARIO_CURRENT].parameters)
+
+    def _update_results(self):
+        results = self.model.scenarios[SCENARIO_CURRENT].results
+        self.frame.canvas.update_results(results)
+
+    def _update_scenarios(self):
+        scn = {name: s.has_results()
+               for name, s in self.model.scenarios.items()}
+        print(scn)
+        self.frame.scenarios.update(scn)
