@@ -1,11 +1,12 @@
 from abc import ABC, abstractmethod
-from typing import Union
+from typing import Union, Self
 from collections.abc import Mapping, Sequence
 from io import TextIOBase
 from pint import Quantity
 
 JSONScalar = str | int | float | bool | None
 JSONType = JSONScalar | Sequence["JSONType"] | Mapping[str, "JSONType"]
+NestedStringMap = Mapping[str, Union[str, "NestedStringMap"]]
 
 # pycharm warning in next line, as Quantity is not a proper class - not my fault
 NestedQuantityMap = Mapping[str, Union[Quantity, "NestedQualityMap"]]
@@ -22,6 +23,24 @@ class DataStructure(dict, NestedQuantityMap):
         node = self.get(path[:-1])
         node[path[-1]] = value
 
+    def to_jsonable(self) -> NestedStringMap:
+        dive = self._dive(lambda x: f"{x:.14g~}")
+        return dive(self)
+
+    @classmethod
+    def from_jsonable(cls, nested_data: NestedStringMap) -> Self:
+        dive = cls._dive(Quantity)
+        return DataStructure(dive(nested_data))
+
+    @staticmethod
+    def _dive(func):
+        def dive(struct):
+            try:
+                items = struct.items()
+            except AttributeError:
+                return func(struct)
+            return {k: dive(v) for k, v in items}
+        return dive
 
 class CalculationFailed(ValueError):
     pass

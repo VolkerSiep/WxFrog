@@ -41,7 +41,7 @@ class QuantityCtrl(wx.Window):
             self, label="\N{LINK SYMBOL}", style=wx.BU_EXACTFIT)
         self.link_ctrl.SetValue(True)
 
-        # status bar
+        # status
         font = wx.Font(8, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL,
                        wx.FONTWEIGHT_NORMAL)
         self.status = wx.StaticText(self, label="")

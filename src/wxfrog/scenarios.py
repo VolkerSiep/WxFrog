@@ -14,4 +14,5 @@ class Scenario:
     def has_results(self) -> bool:
         return len(self.results) > 0
 
-    # TODO: need functionality to (de-serialise) to json
+    # TODO: need functionality to (de-serialise) to primitives
+

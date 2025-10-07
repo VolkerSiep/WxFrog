@@ -6,4 +6,5 @@ LIGHT_GREY = Colour(200, 200, 200)
 DARK_GREY = Colour(80, 80, 80)
 ERROR_RED = Colour(255, 0, 0)
 BLACK = Colour(0, 0, 0)
+WARNING_ORANGE = Colour(220, 170, 0)
 

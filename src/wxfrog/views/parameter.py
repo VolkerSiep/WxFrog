@@ -3,7 +3,6 @@ from pint import Quantity
 import wx
 
 from ..events import NEW_UNIT_DEFINED
-from .colors import ERROR_RED
 
 from .quantity_control import (
     QuantityCtrl, EVT_QUANTITY_CHANGED, EVT_UNIT_DEFINED)
