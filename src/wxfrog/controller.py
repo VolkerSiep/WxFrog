@@ -1,16 +1,14 @@
+from copy import deepcopy
 from importlib.resources.abc import Traversable
 from pubsub import pub
 import wx
 
-from .engine import CalculationEngine
+from .engine import CalculationEngine, DataStructure
 from .views.frame import FrogFrame
 from .model import Model
 from .config import Configuration
-from .events import (
-    EXPORT_CANVAS_GFX, RUN_MODEL, SHOW_PARAMETER_IN_CANVAS, NEW_UNIT_DEFINED,
-    INITIALIZATION_DONE, CALCULATION_DONE, OPEN_SCENARIOS, OPEN_FILE, SAFE_FILE,
-    SAFE_FILE_AS, EXIT_APP, RUN_CASE_STUDY, CALCULATION_FAILED)
-from .scenarios import SCENARIO_CURRENT
+from .events import *
+from .scenarios import SCENARIO_CURRENT, SCENARIO_CONVERGED
 
 
 class Controller:
@@ -29,7 +27,10 @@ class Controller:
                   SAFE_FILE_AS: self._on_save_file_as,
                   EXIT_APP: self._on_exit_app,
                   RUN_CASE_STUDY: self._on_run_case_study,
-                  CALCULATION_FAILED: self._on_calculation_failed}
+                  CALCULATION_FAILED: self._on_calculation_failed,
+                  COPY_SCENARIO: self._on_copy_scenario,
+                  RENAME_SCENARIO: self._on_rename_scenario,
+                  DELETE_SCENARIO: self._on_delete_scenario}
 
         for evt_id, callback in events.items():
             pub.subscribe(callback, evt_id)
@@ -50,6 +51,10 @@ class Controller:
         self.model.run_engine()
 
     def _on_calculation_done(self):
+        # if parameters of converged are still the same as current, copy them.
+        scn = self.model.scenarios
+        if scn[SCENARIO_CURRENT].modified == scn[SCENARIO_CONVERGED].modified:
+            scn[SCENARIO_CURRENT].results = scn[SCENARIO_CONVERGED].results
         self._update_results()
         self._update_scenarios()
 
@@ -88,16 +93,36 @@ class Controller:
         print(RUN_CASE_STUDY)
 
     def _on_show_parameter(self, item):
-        param = self.model.scenarios[SCENARIO_CURRENT].parameters
+        scn_current = self.model.scenarios[SCENARIO_CURRENT]
+        param = scn_current.parameters
         value = param.get(item["path"])
         units = self.model.compatible_units(value)
         new_value = self.frame.canvas.show_parameter_dialog(item, value, units)
         if new_value is not None and new_value != value:
-            param.set(item["path"], new_value)
+            scn_current.set_param(item["path"], new_value)
             self.frame.canvas.update_parameters(param)
 
     def _on_new_unit_defined(self, unit: str):
         self.model.register_unit(unit)
+
+    def _on_copy_scenario(self, source: str, target: str):
+        scenarios = self.model.scenarios
+        scenarios[target] = deepcopy(scenarios[source])
+        if target == SCENARIO_CURRENT:
+            self._update_parameters()
+            self._update_results()
+        self._update_scenarios()
+
+    def _on_rename_scenario(self, source: str, target: str):
+        scenarios = self.model.scenarios
+        scenarios[target] = scenarios[source]
+        del scenarios[source]
+        self._update_scenarios()
+
+    def _on_delete_scenario(self, name: str):
+        scenarios = self.model.scenarios
+        del scenarios[name]
+        self._update_scenarios()
 
     # non-event standard workflows, triggered by events
 
@@ -106,11 +131,12 @@ class Controller:
             self.model.scenarios[SCENARIO_CURRENT].parameters)
 
     def _update_results(self):
-        results = self.model.scenarios[SCENARIO_CURRENT].results
-        self.frame.canvas.update_results(results)
+        scn = self.model.scenarios
+        current = scn[SCENARIO_CURRENT].has_results()
+        which = SCENARIO_CURRENT if current else SCENARIO_CONVERGED
+        self.frame.canvas.update_results(scn[which].results, current)
 
     def _update_scenarios(self):
-        scn = {name: s.has_results()
+        scn = {name: (s.has_results(), s.mod_local_time())
                for name, s in self.model.scenarios.items()}
-        print(scn)
         self.frame.scenarios.update(scn)

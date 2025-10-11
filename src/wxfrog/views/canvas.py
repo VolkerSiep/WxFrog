@@ -116,8 +116,9 @@ class Canvas(wx.ScrolledWindow):
         mdc.SelectObject(wx.NullBitmap)
         bmp.SaveFile(path, wx.BITMAP_TYPE_PNG)
 
-    def update_results(self, values: DataStructure):
-        self.set_results_mode(self.RESULT_VALID)
+    def update_results(self, values: DataStructure, original: bool):
+        mode = self.RESULT_VALID if original else self.RESULT_INVALID
+        self.set_results_mode(mode)
         self._result_labels = self._entries(values, "results")
         self.Refresh()
 
@@ -127,22 +128,24 @@ class Canvas(wx.ScrolledWindow):
 
     def _entries(self, values: DataStructure, which: str):
         def e(item):
-            q = values.get(item["path"])
+            try:
+                q = values.get(item["path"])
+            except KeyError:
+                return None
             res = {"label": item["fmt"].format(q)}
             res.update(item)
             if "name" not in res:
                 res["name"] = ".".join(item["path"])
             return res
 
-        return [e(item) for item in self.config[which]]
+        res = [e(item) for item in self.config[which]]
+        return [r for r in res if r is not None]
 
     def show_parameter_dialog(self, item: Mapping[str, Any], value: Quantity,
                               units: Set[str]):
         dialog = ParameterDialog(self, item, value, units)
-        dialog.Bind(wx.EVT_KILL_FOCUS, lambda e: print("x"))
         if dialog.ShowModal() == wx.ID_OK:
-            if self._results_mode == self.RESULT_VALID:
-                self.set_results_mode(self.RESULT_INVALID)
+            self.set_results_mode(self.RESULT_INVALID)
             return dialog.value
         return None
 

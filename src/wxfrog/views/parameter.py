@@ -10,7 +10,7 @@ from .quantity_control import (
 
 class ParameterDialog(wx.Dialog):
     def __init__(self, parent: wx.Window, item, value, units):
-        super().__init__(parent)  # , title=item['name'])
+        super().__init__(parent, title=item['name'])
         sizer_1 = wx.BoxSizer(wx.VERTICAL)
         q_ctrl = QuantityCtrl(self, value, units,
                               item.get("min", None), item.get("max", None))
@@ -24,8 +24,7 @@ class ParameterDialog(wx.Dialog):
         sizer_2.Add(self.ok, 0, wx.ALL, 3)
         sizer_1.Add(sizer_2, 0, wx.EXPAND|wx.ALL, 3)
 
-        self.SetSizer(sizer_1)
-        self.Fit()
+        self.SetSizerAndFit(sizer_1)
 
         q_ctrl.Bind(EVT_QUANTITY_CHANGED, self._qty_changed)
         q_ctrl.Bind(EVT_UNIT_DEFINED, self._new_unit_defined)

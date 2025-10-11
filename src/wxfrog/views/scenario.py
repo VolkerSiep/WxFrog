@@ -1,9 +1,14 @@
 from collections.abc import Mapping, Collection
+from typing import Tuple
+from datetime import datetime
+
+from pubsub import pub
 import wx
 from wx.lib.mixins import listctrl
 from ..scenarios import SCENARIO_CURRENT, SCENARIO_CONVERGED, SCENARIO_DEFAULT
 from .colors import ERROR_RED, WARNING_ORANGE
-
+from ..events import (
+    COPY_SCENARIO, RENAME_SCENARIO, DELETE_SCENARIO, ACTIVATE_SCENARIO)
 
 class ScenarioNameDialog(wx.Dialog):
     def __init__(self, parent: wx.Window, names: Collection[str]):
@@ -36,8 +41,8 @@ class ScenarioNameDialog(wx.Dialog):
         self.Fit()
 
         self.name_ctrl.Bind(wx.EVT_TEXT, self._on_name_changed)
-        self.ok.Bind(wx.EVT_BUTTON, lambda e: self.EndModal(True))
-        cancel.Bind(wx.EVT_BUTTON, lambda e: self.EndModal(False))
+        self.ok.Bind(wx.EVT_BUTTON, lambda e: self.EndModal(wx.ID_OK))
+        cancel.Bind(wx.EVT_BUTTON, lambda e: self.EndModal(wx.ID_CANCEL))
 
     @property
     def value(self):
@@ -68,11 +73,12 @@ class ScenarioNameDialog(wx.Dialog):
 
 class ScenarioListCtrl(wx.ListCtrl, listctrl.ListCtrlAutoWidthMixin):
     def __init__(self, parent: wx.Window):
-        style = wx.LC_REPORT # | wx.BORDER_NONE| wx.LC_EDIT_LABELS
-        super().__init__(parent, style=style)
+        super().__init__(parent, style=wx.LC_REPORT)
         listctrl.ListCtrlAutoWidthMixin.__init__(self)  # wx doesn't use super()
-        self.InsertColumn(0, "Scenario")
-        self.InsertColumn(1, "Results")
+        self.SetMinSize(wx.Size(500, 200))
+        self.InsertColumn(0, "Scenario", width=290)
+        self.InsertColumn(1, "Modified", width=140)
+        self.InsertColumn(2, "Results")
 
 
 class ScenarioManager(wx.Dialog):
@@ -80,22 +86,21 @@ class ScenarioManager(wx.Dialog):
         super().__init__(parent, title="Manage Scenarios")
         sizer = wx.BoxSizer(wx.VERTICAL)
         self.list = ScenarioListCtrl(self)
-        self.list.SetMinSize(wx.Size(250, 400))
-        sizer.Add(self.list, 0, wx.EXPAND | wx.ALL, 3)
+        sizer.Add(self.list, 1, wx.EXPAND | wx.ALL, 3)
         self.SetSizer(sizer)
         self.list.Bind(wx.EVT_LIST_ITEM_RIGHT_CLICK, self._on_right_click)
-        self.Fit()
+        self.SetSizerAndFit(sizer)
 
         self._popup_ids = None
+        self._scenario_in_context = None
 
-    def update(self, scenarios: Mapping[str, bool]):
+    def update(self, scenarios: Mapping[str, Tuple[bool, datetime]]):
         lst = self.list
         lst.DeleteAllItems()
-        scenarios["hansi"] = True  # TODO: just for a test
-        scenarios["peter"] = False
-        for name, has_results in sorted(scenarios.items()):
+        for name, (has_results, modified) in sorted(scenarios.items()):
             index = lst.InsertItem(lst.GetItemCount(), name)
-            lst.SetItem(index, 1,  "Yes" if has_results else "No")
+            lst.SetItem(index, 1,  modified.strftime("%y-%m-%d %H:%M:%S"))
+            lst.SetItem(index, 2,  "Yes" if has_results else "No")
 
     def _on_right_click(self, event):
         # define call-backs and condition when to show which items
@@ -121,32 +126,36 @@ class ScenarioManager(wx.Dialog):
             if (name if name[0] == "*" else "custom") in menu_items[n][1]:
                 menu.Append(ref_id, n)
 
+        self._scenario_in_context = name
         self.PopupMenu(menu)
+        self._scenario_in_context = None
         menu.Destroy()
 
     def _on_keep(self, event):
-        # ask list for names
+        source = self._scenario_in_context
         names = self._get_custom_names()
         dialog = ScenarioNameDialog(self, names)
-        if dialog.ShowModal() == wx.OK:
-            name = dialog.value
-            # and tell controller to copy scenario and update scenarios
+        if dialog.ShowModal() == wx.ID_OK:
+            pub.sendMessage(COPY_SCENARIO, source=source, target=dialog.value)
 
     def _on_rename(self, event):
+        source = self._scenario_in_context
         names = self._get_custom_names()
         dialog = ScenarioNameDialog(self, names)
-        if dialog.ShowModal() == wx.OK:
-            name = dialog.value
-            # and tell controller to rename scenario and update scenarios
+        if dialog.ShowModal() == wx.ID_OK:
+            pub.sendMessage(RENAME_SCENARIO, source=source, target=dialog.value)
 
     def _on_delete(self, event):
-        # ask to confirm
-        pass
+        source = self._scenario_in_context
+        msg = f"Do you really want to delete the scenario\n'{source}'?"
+        style = wx.YES_NO | wx.NO_DEFAULT
+        dialog = wx.MessageDialog(self, msg, "Scenarios", style=style)
+        if dialog.ShowModal() == wx.ID_YES:
+            pub.sendMessage(DELETE_SCENARIO, name=source)
 
     def _on_activate(self, event):
-        # ask controller to copy scenario to default
-        #   and update parameters and results
-        pass
+        source = self._scenario_in_context
+        pub.sendMessage(COPY_SCENARIO, source=source, target=SCENARIO_CURRENT)
 
     def _get_custom_names(self) -> Collection[str]:
         lst, idx, names = self.list, -1, set()

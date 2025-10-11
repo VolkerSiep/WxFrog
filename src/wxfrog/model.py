@@ -1,5 +1,5 @@
 
-from collections.abc import Set, Collection, Mapping
+from collections.abc import Set, Collection, MutableMapping
 from threading import Thread
 from copy import deepcopy
 
@@ -45,7 +45,7 @@ class Model:
         return errors
 
     @property
-    def scenarios(self) -> Mapping[str, Scenario]:
+    def scenarios(self) -> MutableMapping[str, Scenario]:
         return self._scenarios
 
     @property
@@ -54,17 +54,18 @@ class Model:
 
     def run_engine(self):
         def f():
+            param = scn.parameters
             try:
+                # TODO: set initial values if available in scenario
                 results = DataStructure(self._engine.calculate(param))
             except CalculationFailed as error:
                 pub.sendMessage(CALCULATION_FAILED, message=str(error))
             else:
-                current = self.scenarios[SCENARIO_CURRENT]
-                current.results = results
-                self._scenarios[SCENARIO_CONVERGED] = deepcopy(current)
+                scn.results = results
+                self._scenarios[SCENARIO_CONVERGED] = scn
                 pub.sendMessage(CALCULATION_DONE)
 
-        param = deepcopy(self._scenarios[SCENARIO_CURRENT]).parameters
+        scn = deepcopy(self._scenarios[SCENARIO_CURRENT])
         Thread(target=f).start()
 
     def compatible_units(self, value: Quantity) -> Set[str]:
