@@ -3,11 +3,10 @@ from collections.abc import Set, Collection, MutableMapping
 from threading import Thread
 from copy import deepcopy
 
-from pint import (Unit, DimensionalityError, DefinitionSyntaxError,
-                  UndefinedUnitError)
+from pint import DimensionalityError, DefinitionSyntaxError, UndefinedUnitError
 from pubsub import pub
 
-from .utils import fmt_unit, ThreadedStringIO
+from .utils import fmt_unit, ThreadedStringIO, get_unit_registry
 from .engine import (
     CalculationEngine, DataStructure, Quantity, CalculationFailed)
 from .config import (
@@ -26,6 +25,7 @@ class Model:
         self._out_stream = ThreadedStringIO()
         self._all_units = set()
         self._scenarios = {}
+        self.file_path = None
 
     def initialise_engine(self):
         def f():
@@ -40,6 +40,7 @@ class Model:
         snc[SCENARIO_DEFAULT] = Scenario(default_params)
         snc[SCENARIO_CURRENT] = deepcopy(snc[SCENARIO_DEFAULT])
         errors = self._initialize_parameters(default_params)
+        Unit = get_unit_registry().Unit
         self._all_units = {fmt_unit(Unit(u))
                            for u in self._configuration["units"]}
         return errors
@@ -73,11 +74,13 @@ class Model:
         return result | {fmt_unit(value.u)}
 
     def register_unit(self, unit):
+        Unit = get_unit_registry().Unit
         self._all_units.add(fmt_unit(Unit(unit)))
 
     def _initialize_parameters(self, param: DataStructure
                                ) -> Collection[ConfigurationError]:
         errors = []
+        Quantity = get_unit_registry().Quantity
         for item in self._configuration["parameters"]:
             path = item["path"]
             try:
@@ -104,3 +107,14 @@ class Model:
             elif i_min is not None and v < (v_min := Quantity(i_min, v.u)):
                 errors.append(OutOfBounds(path, v, v_min, False))
         return errors
+
+    def serialize(self):
+        return {
+            "units": list(self._all_units),
+            "scenarios": {n: s.serialize() for n, s in self._scenarios.items()}
+        }
+
+    def deserialize(self, data):
+        self._all_units = set(data["units"])
+        self._scenarios = {n: Scenario.deserialize(d)
+                           for n, d in data["scenarios"].items()}

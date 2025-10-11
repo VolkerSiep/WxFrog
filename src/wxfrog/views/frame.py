@@ -50,7 +50,7 @@ class FrogFrame(wx.Frame):
                                 "Export canvas as png")
         self.Bind(wx.EVT_MENU, lambda e: sendMessage(EXPORT_CANVAS_GFX), item)
         item = file_menu.Append(wx.ID_ANY, "E&xit\tCTRL+x", "Exit simulator")
-        self.Bind(wx.EVT_MENU, lambda e: self.Close())
+        self.Bind(wx.EVT_MENU, lambda e: self.Close(), item)
         menu_bar.Append(file_menu, "&File")
 
         run_menu = wx.Menu()
@@ -84,12 +84,19 @@ class FrogFrame(wx.Frame):
         if dialog.ShowModal() == wx.ID_YES:
             self.monitor.Show()
 
-    def show_file_dialog(self, msg: str, wildcard: str, save: bool):
+    def show_file_dialog(self, msg: str, file_type: str, ending: str,
+                         save: bool):
+
+        wildcard = f"{file_type} files (*.{ending})|*.{ending}"
+        print(wildcard)
         style = _FD_STYLE_SAVE if save else _FD_STYLE_LOAD
         dialog = wx.FileDialog(self, msg, wildcard=wildcard, style=style)
         if dialog.ShowModal() == wx.ID_OK:
             path = dialog.GetPath()
-            return path if path.lower().endswith(".png") else f"{path}.png"
+            if path.lower().endswith(f".{ending}"):
+                return path
+            else:
+                return f"{path}.{ending}"
         else:
             return None
 

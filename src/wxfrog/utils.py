@@ -1,9 +1,21 @@
 from io import TextIOBase, StringIO
 from threading import Lock
-from pint import Unit
+from pint import UnitRegistry
+
+_unit_registry = UnitRegistry(autoconvert_offset_to_baseunit=True)
 
 
-def fmt_unit(unit: Unit):
+def set_unit_registry(registry: UnitRegistry):
+    global _unit_registry
+    _unit_registry = registry
+    registry.autoconvert_offset_to_baseunit = True
+
+
+def get_unit_registry() -> UnitRegistry:
+    return _unit_registry
+
+
+def fmt_unit(unit: _unit_registry.Unit):
     result = f"{unit:~P#}"
     return result.replace(" ", "")
 

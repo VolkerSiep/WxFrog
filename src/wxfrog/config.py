@@ -2,10 +2,12 @@ from importlib.resources import as_file
 from importlib.resources.abc import Traversable
 from collections.abc import Sequence
 from yaml import safe_load
-from pint import Quantity
 from wx.svg import SVGimage
+from pint import Quantity
+
 
 CONFIG_FILENAME = "configuration.yml"
+
 
 class Configuration(dict):
     def __init__(self, config_dir: Traversable):

@@ -5,7 +5,7 @@ from wx.lib.newevent import NewCommandEvent
 from pint import (Quantity, Unit, DimensionalityError, DefinitionSyntaxError,
                   UndefinedUnitError)
 
-from ..utils import fmt_unit
+from ..utils import fmt_unit, get_unit_registry
 from .colors import ERROR_RED, LIGHT_GREY
 
 
@@ -23,6 +23,7 @@ class QuantityCtrl(wx.Window):
         value_str = f"{value.m:.7g}"
         unit_str = fmt_unit(value.u)
         self.value = value
+        Quantity = get_unit_registry().Quantity
         self.min = None if min_value is None else Quantity(min_value, unit_str)
         self.max = None if max_value is None else Quantity(max_value, unit_str)
         self.units = set(units)
@@ -129,6 +130,7 @@ class QuantityCtrl(wx.Window):
             show_error("Invalid number format")
             return
 
+        Quantity = get_unit_registry().Quantity
         self.value = Quantity(new_value, self.value.u)
         self._fire_change_event()
 

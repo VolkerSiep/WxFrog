@@ -1,9 +1,10 @@
 from importlib.resources import files
 from time import sleep
-from pint import Quantity
 from sys import stdout
 
-from wxfrog import main, CalculationEngine, CalculationFailed
+from wxfrog import main, CalculationEngine, CalculationFailed, get_unit_registry
+
+Quantity = get_unit_registry().Quantity
 
 PAUSE_SECONDS = 1
 

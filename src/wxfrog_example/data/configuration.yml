@@ -1,5 +1,6 @@
 app_name: "WX-Frog example application"
 frame_initial_size: [1000, 700]
+file_ending: exa
 
 bg_picture_name: bg_picture.svg
 bg_picture_width: 2000

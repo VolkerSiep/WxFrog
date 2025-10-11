@@ -4,6 +4,8 @@ from collections.abc import Mapping, Sequence
 from io import TextIOBase
 from pint import Quantity
 
+from wxfrog.utils import get_unit_registry
+
 JSONScalar = str | int | float | bool | None
 JSONType = JSONScalar | Sequence["JSONType"] | Mapping[str, "JSONType"]
 NestedStringMap = Mapping[str, Union[str, "NestedStringMap"]]
@@ -29,17 +31,16 @@ class DataStructure(dict, NestedQuantityMap):
 
     @classmethod
     def from_jsonable(cls, nested_data: NestedStringMap) -> Self:
-        dive = cls._dive(Quantity)
+        dive = cls._dive(get_unit_registry().Quantity)
         return DataStructure(dive(nested_data))
 
     @staticmethod
     def _dive(func):
         def dive(struct):
-            try:
-                items = struct.items()
-            except AttributeError:
+            if isinstance(struct, Mapping):
+                return {k: dive(v) for k, v in struct.items()}
+            else:
                 return func(struct)
-            return {k: dive(v) for k, v in items}
         return dive
 
 class CalculationFailed(ValueError):

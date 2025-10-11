@@ -1,6 +1,8 @@
 from copy import deepcopy
 from importlib.resources.abc import Traversable
 from pubsub import pub
+from zipfile import ZipFile, ZIP_DEFLATED
+from json import dumps, load
 import wx
 
 from .engine import CalculationEngine, DataStructure
@@ -42,8 +44,7 @@ class Controller:
 
     def _on_export_canvas_gfx(self):
         msg = "Save canvas as graphics"
-        wildcard = "PNG files (.png)|.png"
-        path = self.frame.show_file_dialog(msg, wildcard, save=True)
+        path = self.frame.show_file_dialog(msg, "PNG files", "png", save=True)
         if path is not None:
             self.frame.canvas.save_as_png(path)
 
@@ -74,16 +75,41 @@ class Controller:
         self.frame.scenarios.Show()
 
     def _on_open_file(self):
-        print(OPEN_FILE)
+        msg = "Save file"
+        app_name = self.configuration["app_name"]
+        ending = self.configuration["file_ending"]
+        path = self.frame.show_file_dialog(msg, app_name, ending, save=False)
+        if path is None:
+            return
+
+        with ZipFile(path, "r") as zip_file:
+            with zip_file.open("data.json") as file:
+                data = load(file)
+        self.model.file_path = path
+        self.model.deserialize(data)
+
         self._update_parameters()
         self._update_results()
         self._update_scenarios()
 
     def _on_save_file(self):
-        print(SAFE_FILE)
+        path = self.model.file_path
+        if path is None:
+            self._on_save_file_as()
+            return
+        data = self.model.serialize()
+        json = dumps(data, indent=2, ensure_ascii=False)
+        with ZipFile(path, "w", compression=ZIP_DEFLATED) as file:
+            file.writestr("data.json", json)
 
     def _on_save_file_as(self):
-        print(SAFE_FILE_AS)
+        msg = "Save file"
+        app_name = self.configuration["app_name"]
+        ending = self.configuration["file_ending"]
+        path = self.frame.show_file_dialog(msg, app_name, ending, save=True)
+        if path is not None:
+            self.model.file_path = path
+            self._on_save_file()
 
     def _on_exit_app(self, event):
         print(EXIT_APP)
