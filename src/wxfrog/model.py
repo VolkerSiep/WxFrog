@@ -40,8 +40,8 @@ class Model:
         snc[SCENARIO_DEFAULT] = Scenario(default_params)
         snc[SCENARIO_CURRENT] = deepcopy(snc[SCENARIO_DEFAULT])
         errors = self._initialize_parameters(default_params)
-        Unit = get_unit_registry().Unit
-        self._all_units = {fmt_unit(Unit(u))
+        U = get_unit_registry().Unit
+        self._all_units = {fmt_unit(U(u))
                            for u in self._configuration["units"]}
         return errors
 
@@ -67,7 +67,7 @@ class Model:
                 pub.sendMessage(CALCULATION_DONE)
 
         scn = deepcopy(self._scenarios[SCENARIO_CURRENT])
-        Thread(target=f).start()
+        Thread(target=f, daemon=True).start()
 
     def compatible_units(self, value: Quantity) -> Set[str]:
         result = {u for u in self._all_units if value.is_compatible_with(u)}
@@ -80,7 +80,7 @@ class Model:
     def _initialize_parameters(self, param: DataStructure
                                ) -> Collection[ConfigurationError]:
         errors = []
-        Quantity = get_unit_registry().Quantity
+        Q = get_unit_registry().Quantity
         for item in self._configuration["parameters"]:
             path = item["path"]
             try:
@@ -102,9 +102,9 @@ class Model:
                 continue
             v = param.get(path)
             i_min, i_max = item["min"], item["max"]
-            if i_max is not None and v > (v_max := Quantity(i_max, v.u)):
+            if i_max is not None and v > (v_max := Q(i_max, v.u)):
                 errors.append(OutOfBounds(path, v, v_max, True))
-            elif i_min is not None and v < (v_min := Quantity(i_min, v.u)):
+            elif i_min is not None and v < (v_min := Q(i_min, v.u)):
                 errors.append(OutOfBounds(path, v, v_min, False))
         return errors
 

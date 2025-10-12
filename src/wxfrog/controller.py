@@ -4,8 +4,10 @@ from pubsub import pub
 from zipfile import ZipFile, ZIP_DEFLATED
 from json import dumps, load
 import wx
+from wx.dataview import DataViewEvent
+from pint import Quantity
 
-from .engine import CalculationEngine, DataStructure
+from .engine import CalculationEngine
 from .views.frame import FrogFrame
 from .model import Model
 from .config import Configuration
@@ -32,7 +34,9 @@ class Controller:
                   CALCULATION_FAILED: self._on_calculation_failed,
                   COPY_SCENARIO: self._on_copy_scenario,
                   RENAME_SCENARIO: self._on_rename_scenario,
-                  DELETE_SCENARIO: self._on_delete_scenario}
+                  DELETE_SCENARIO: self._on_delete_scenario,
+                  OPEN_RESULTS: self._on_open_results,
+                  RESULT_UNIT_CLICKED: self._on_result_unit_clicked}
 
         for evt_id, callback in events.items():
             pub.subscribe(callback, evt_id)
@@ -69,6 +73,9 @@ class Controller:
         wx.CallAfter(self._update_parameters)
         if self.configuration["run_engine_on_start"]:
             self.model.run_engine()
+
+    def _on_open_results(self):
+        self.frame.results.Show()
 
     def _on_open_scenarios(self):
         self._update_scenarios()
@@ -113,6 +120,7 @@ class Controller:
 
     def _on_exit_app(self, event):
         print(EXIT_APP)
+        # kill run thread
         event.Skip()
 
     def _on_run_case_study(self):
@@ -150,6 +158,10 @@ class Controller:
         del scenarios[name]
         self._update_scenarios()
 
+    def _on_result_unit_clicked(self, item, value):
+        units = self.model.compatible_units(value)
+        self.frame.results.view_ctrl.change_unit(item, units)
+
     # non-event standard workflows, triggered by events
 
     def _update_parameters(self):
@@ -166,3 +178,4 @@ class Controller:
         scn = {name: (s.has_results(), s.mod_local_time())
                for name, s in self.model.scenarios.items()}
         self.frame.scenarios.update(scn)
+

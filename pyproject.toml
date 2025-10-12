@@ -14,16 +14,16 @@ authors = [
 description = "WX-python FROntend kept Generic"
 readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.11"
-license = { text = "LGPL-3.0-or-later" }
+license = { text = "MIT AND (Apache-2.0 OR BSD-2-Clause)" }
 keywords = ["process modelling", "user interface"]
 classifiers = [
-    "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
+    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Topic :: Scientific/Engineering",
 ]
 
 dependencies = [
-    "wxpython",
+    "wxpython>=4.2.3",  # needed for several reasons, e.g. DataViewCtrl update
     "pint",
     "pyyaml",
     "Pypubsub"

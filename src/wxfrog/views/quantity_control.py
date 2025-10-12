@@ -23,9 +23,9 @@ class QuantityCtrl(wx.Window):
         value_str = f"{value.m:.7g}"
         unit_str = fmt_unit(value.u)
         self.value = value
-        Quantity = get_unit_registry().Quantity
-        self.min = None if min_value is None else Quantity(min_value, unit_str)
-        self.max = None if max_value is None else Quantity(max_value, unit_str)
+        Q = get_unit_registry().Quantity
+        self.min = None if min_value is None else Q(min_value, unit_str)
+        self.max = None if max_value is None else Q(max_value, unit_str)
         self.units = set(units)
 
         self.magnitude_ctrl = wx.TextCtrl(

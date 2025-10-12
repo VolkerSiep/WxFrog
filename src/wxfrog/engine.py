@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Union, Self
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping, Sequence, MutableMapping
 from io import TextIOBase
-from pint import Quantity
+from pint import Quantity, Unit, DimensionalityError
 
 from wxfrog.utils import get_unit_registry
 
@@ -29,6 +29,18 @@ class DataStructure(dict, NestedQuantityMap):
         dive = self._dive(lambda x: f"{x:.14g~}")
         return dive(self)
 
+    def convert_all_possible_to(self, unit: Unit):
+        def dive(structure: MutableMapping):
+           for k, v in structure.items():
+               if isinstance(v, MutableMapping):
+                   dive(v)
+                   continue
+               try:
+                   structure[k] = v.to(unit)
+               except DimensionalityError:
+                   pass
+        dive(self)
+
     @classmethod
     def from_jsonable(cls, nested_data: NestedStringMap) -> Self:
         dive = cls._dive(get_unit_registry().Quantity)
@@ -42,6 +54,7 @@ class DataStructure(dict, NestedQuantityMap):
             else:
                 return func(struct)
         return dive
+
 
 class CalculationFailed(ValueError):
     pass
