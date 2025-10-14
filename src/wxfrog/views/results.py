@@ -1,4 +1,4 @@
-from collections.abc import Mapping, Collection
+from collections.abc import Mapping
 import wx
 from wx.dataview import (
     PyDataViewModel, DataViewItem, NullDataViewItem, DataViewCtrl,
@@ -8,164 +8,21 @@ from pubsub import pub
 from pint import Quantity
 
 from wxfrog.engine import DataStructure
-from wxfrog.utils import fmt_unit, get_unit_registry  # just for a test (to add fake data)
-from wxfrog.events import RESULT_UNIT_CLICKED, NEW_UNIT_DEFINED
+from wxfrog.utils import fmt_unit
+from wxfrog.events import (
+    RESULT_UNIT_CLICKED, NEW_UNIT_DEFINED, RESULT_UNIT_CHANGED)
 
 
 class ResultViewModel(PyDataViewModel):
     def __init__(self):
         super().__init__()
-        # TODO: just for a test, filling with fake data
-        Q = get_unit_registry().Quantity
-        self.data = DataStructure({
-    "thermodynamics": {
-        "pressure": {
-            "inlet": {
-                "nominal": {
-                    "value": Q(101.345678, "kPa"),
-                    "min": Q(3.14159e6, "kPa"),
-                    "max": Q(105.0, "kPa"),
-                },
-                "outlet": {
-                    "nominal": {
-                        "value": Q(100.1, "kPa"),
-                        "min": Q(95.0, "kPa"),
-                        "max": Q(104.0, "kPa"),
-                    },
-                },
-            },
-            "drop": {
-                "across_valve": {
-                    "design": {
-                        "value": Q(2.3, "kPa"),
-                        "tol": Q(0.1, "kPa"),
-                    },
-                    "measured": {
-                        "value": Q(2.5, "kPa"),
-                        "tol": Q(0.15, "kPa"),
-                    },
-                },
-            },
-        },
-        "temperature": {
-            "feed": {
-                "nominal": {
-                    "value": Q(298.15, "K"),
-                    "min": Q(295.0, "K"),
-                    "max": Q(303.0, "K"),
-                },
-            },
-            "product": {
-                "nominal": {
-                    "value": Q(310.0, "K"),
-                    "min": Q(308.0, "K"),
-                    "max": Q(312.0, "K"),
-                },
-            },
-        },
-    },
-    "flow": {
-        "mass": {
-            "stream_1": {
-                "conditions": {
-                    "min": Q(0.5, "kg/s"),
-                    "nominal": Q(0.8, "kg/s"),
-                    "max": Q(1.2, "kg/s"),
-                },
-            },
-            "stream_2": {
-                "conditions": {
-                    "min": Q(0.2, "kg/s"),
-                    "nominal": Q(0.4, "kg/s"),
-                    "max": Q(0.6, "kg/s"),
-                },
-            },
-        },
-        "molar": {
-            "stream_1": {
-                "conditions": {
-                    "min": Q(10.0, "mol/s"),
-                    "nominal": Q(15.0, "mol/s"),
-                    "max": Q(20.0, "mol/s"),
-                },
-            },
-        },
-    },
-    "geometry": {
-        "pipe": {
-            "section_A": {
-                "dimensions": {
-                    "diameter": Q(0.05, "m"),
-                    "length": Q(3.0, "m"),
-                    "roughness": Q(0.0001, "m"),
-                },
-            },
-            "section_B": {
-                "dimensions": {
-                    "diameter": Q(0.08, "m"),
-                    "length": Q(2.5, "m"),
-                    "roughness": Q(0.00015, "m"),
-                },
-            },
-        },
-    },
-    "composition": {
-        "gas": {
-            "CO2": {
-                "fraction": {
-                    "mol": Q(0.12, "mol/mol"),
-                    "mass": Q(0.08, "kg/kg"),
-                },
-            },
-            "NH3": {
-                "fraction": {
-                    "mol": Q(0.15, "mol/mol"),
-                    "mass": Q(0.09, "kg/kg"),
-                },
-            },
-            "H2O": {
-                "fraction": {
-                    "mol": Q(0.73, "mol/mol"),
-                    "mass": Q(0.83, "kg/kg"),
-                },
-            },
-        },
-        "liquid": {
-            "NH3": {
-                "fraction": {
-                    "mol": Q(0.3, "mol/mol"),
-                    "mass": Q(0.27, "kg/kg"),
-                },
-            },
-            "H2O": {
-                "fraction": {
-                    "mol": Q(0.7, "mol/mol"),
-                    "mass": Q(0.73, "kg/kg"),
-                },
-            },
-        },
-    },
-    "energy": {
-        "heat_duty": {
-            "reactor": {
-                "cycle": {
-                    "min": Q(200.0, "kW"),
-                    "nominal": Q(250.0, "kW"),
-                    "max": Q(280.0, "kW"),
-                },
-            },
-        },
-        "power": {
-            "motor": {
-                "nominal": {
-                    "shaft": Q(45.0, "kW"),
-                    "electrical": Q(50.0, "kW"),
-                },
-            },
-        },
-    },
-})
+        self.data = DataStructure()
         self._items = {}
+
+    def set_data(self, data: DataStructure):
+        self.data = data
+        self._items = {}
+        self.Cleared()
 
     def ObjectToItem(self, path):
         # required so that same items have same ids
@@ -227,7 +84,8 @@ class ResultViewModel(PyDataViewModel):
 
 
 class UnitPopup(wx.PopupTransientWindow):
-    def __init__(self, parent, active_unit, units, callback, size):
+    def __init__(self, parent: wx.Window, active_unit: str,
+                 units: list[str], callback, size: wx.Size):
         super().__init__(parent, flags=wx.BORDER_SIMPLE)
         pnl = wx.Panel(self)
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -302,7 +160,7 @@ class ResultDataViewCtrl(DataViewCtrl):
         if isinstance(value, Quantity):
             model.data.convert_all_possible_to(value.u)
         model.all_values_changed()
-        # should fire event to refresh results on canvas
+        pub.sendMessage(RESULT_UNIT_CHANGED)
 
     def _on_item_activated(self, event):
         if event.GetColumn() != 2:
@@ -327,6 +185,7 @@ class ResultDataViewCtrl(DataViewCtrl):
                 self.model.ItemChanged(item)
                 if new_unit not in units:
                     pub.sendMessage(NEW_UNIT_DEFINED, unit=new_unit)
+                pub.sendMessage(RESULT_UNIT_CHANGED)
 
         col = self.GetColumn(2)
         path = self.model.ItemToObject(item)
@@ -351,3 +210,12 @@ class ResultView(wx.Dialog):
         self.view_ctrl = ResultDataViewCtrl(self)
         sizer.Add(self.view_ctrl, 1, wx.EXPAND | wx.ALL, 3)
         self.SetSizerAndFit(sizer)
+
+# TODO:
+#  - Make menu for expand all, collapse all
+#  - when clicking on value item, show values for all scenarios
+#
+#  TODO general:
+#   - if path is not none, show it in application window title or status bar
+#   - parameter coloring
+#   - when clicking on result, show values in all scenarios

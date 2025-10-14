@@ -36,7 +36,8 @@ class Controller:
                   RENAME_SCENARIO: self._on_rename_scenario,
                   DELETE_SCENARIO: self._on_delete_scenario,
                   OPEN_RESULTS: self._on_open_results,
-                  RESULT_UNIT_CLICKED: self._on_result_unit_clicked}
+                  RESULT_UNIT_CLICKED: self._on_result_unit_clicked,
+                  RESULT_UNIT_CHANGED: self._update_results}
 
         for evt_id, callback in events.items():
             pub.subscribe(callback, evt_id)
@@ -54,6 +55,8 @@ class Controller:
 
     def _on_model_run(self):
         self.model.run_engine()
+        self.frame.run_menu_item.Enable(False)
+        self.frame.case_study_menu_item.Enable(False)
 
     def _on_calculation_done(self):
         # if parameters of converged are still the same as current, copy them.
@@ -62,9 +65,13 @@ class Controller:
             scn[SCENARIO_CURRENT].results = scn[SCENARIO_CONVERGED].results
         self._update_results()
         self._update_scenarios()
+        self.frame.run_menu_item.Enable()
+        self.frame.case_study_menu_item.Enable()
 
     def _on_calculation_failed(self, message):
         self.frame.show_calculation_error(message)
+        self.frame.run_menu_item.Enable()
+        self.frame.case_study_menu_item.Enable()
 
     def _on_initialisation_done(self):
         errors = self.model.finalize_initialisation()
@@ -72,7 +79,7 @@ class Controller:
             wx.CallAfter(self.frame.show_config_error_dialog, errors)
         wx.CallAfter(self._update_parameters)
         if self.configuration["run_engine_on_start"]:
-            self.model.run_engine()
+            self._on_model_run()
 
     def _on_open_results(self):
         self.frame.results.Show()
@@ -93,6 +100,7 @@ class Controller:
             with zip_file.open("data.json") as file:
                 data = load(file)
         self.model.file_path = path
+        self.frame.update_title(path)
         self.model.deserialize(data)
 
         self._update_parameters()
@@ -117,10 +125,11 @@ class Controller:
         if path is not None:
             self.model.file_path = path
             self._on_save_file()
+            self.frame.update_title(path)
 
     def _on_exit_app(self, event):
         print(EXIT_APP)
-        # kill run thread
+        # may ask to save file
         event.Skip()
 
     def _on_run_case_study(self):
@@ -173,6 +182,7 @@ class Controller:
         current = scn[SCENARIO_CURRENT].has_results()
         which = SCENARIO_CURRENT if current else SCENARIO_CONVERGED
         self.frame.canvas.update_results(scn[which].results, current)
+        self.frame.results.view_ctrl.model.set_data(scn[which].results)
 
     def _update_scenarios(self):
         scn = {name: (s.has_results(), s.mod_local_time())

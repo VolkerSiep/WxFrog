@@ -23,9 +23,12 @@ wx.Log.SetLogLevel(0)
 class FrogFrame(wx.Frame):
     def __init__(self, config: Configuration, out_stream: ThreadedStringIO):
         self.config = config
-        super().__init__(None, title=config["app_name"],
+        title = f"{config['app_name']}"
+        super().__init__(None, title=title,
                          size=wx.Size(*config["frame_initial_size"]))
         self.canvas = Canvas(self, self.config)
+        self.run_menu_item = None
+        self.case_study_menu_item = None
         self.define_menu()
 
         self.monitor = EngineMonitor(self, out_stream)
@@ -37,6 +40,7 @@ class FrogFrame(wx.Frame):
         #  it's a shame that wx doesn't support better control.
         self.SetMaxSize(self.canvas.bg_size + wx.Size(50, 70))
         self.Centre()
+
 
     def define_menu(self):
         menu_bar = wx.MenuBar()
@@ -58,10 +62,12 @@ class FrogFrame(wx.Frame):
 
         engine_menu = wx.Menu()
         item = engine_menu.Append(wx.ID_ANY, "&Run model\tCTRL+e",
-                                 "Run model in background")
+                                  "Run model in background")
         self.Bind(wx.EVT_MENU, lambda e: sendMessage(RUN_MODEL), item)
+        self.run_menu_item = item
         item = engine_menu.Append(wx.ID_ANY, "&Case study ...\tCTRL+c",
                                  "Run case study")
+        self.case_study_menu_item = item
         self.Bind(wx.EVT_MENU, lambda e: sendMessage(RUN_CASE_STUDY), item)
         menu_bar.Append(engine_menu, "&Engine")
 
@@ -104,6 +110,11 @@ class FrogFrame(wx.Frame):
                 return f"{path}.{ending}"
         else:
             return None
+
+    def update_title(self, filename: str):
+        title = f"{self.config['app_name']} - {filename}"
+        self.SetTitle(title)
+
 
     def show_config_error_dialog(self, errors: Collection[ConfigurationError]):
         dialog = ConfigErrorDialog(self, errors)
