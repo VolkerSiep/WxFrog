@@ -162,6 +162,16 @@ class ResultDataViewCtrl(DataViewCtrl):
         model.all_values_changed()
         pub.sendMessage(RESULT_UNIT_CHANGED)
 
+    def on_collapse_all(self, event):
+        self.model.GetChildren(NullDataViewItem, children := [])
+        for c in children:
+            self.Collapse(c)
+
+    def on_expand_all(self, event):
+        self.model.GetChildren(NullDataViewItem, children := [])
+        for c in children:
+            self.ExpandChildren(c)
+
     def _on_item_activated(self, event):
         if event.GetColumn() != 2:
             return
@@ -202,7 +212,7 @@ class ResultDataViewCtrl(DataViewCtrl):
         wx.CallAfter(popup.Popup)
 
 
-class ResultView(wx.Dialog):
+class ResultView(wx.Frame):
     def __init__(self, parent: wx.Window):
         style = wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER | wx.MAXIMIZE_BOX
         super().__init__(parent, id=wx.ID_ANY, title="Results", style=style)
@@ -211,11 +221,16 @@ class ResultView(wx.Dialog):
         sizer.Add(self.view_ctrl, 1, wx.EXPAND | wx.ALL, 3)
         self.SetSizerAndFit(sizer)
 
-# TODO:
-#  - Make menu for expand all, collapse all
-#  - when clicking on value item, show values for all scenarios
-#
-#  TODO general:
-#   - if path is not none, show it in application window title or status bar
-#   - parameter coloring
-#   - when clicking on result, show values in all scenarios
+        menu_bar = wx.MenuBar()
+
+        view_menu = wx.Menu()
+        item = view_menu.Append(wx.ID_ANY, "E&xpand all\tCTRL+e",
+                                  "Expand all nodes")
+        self.Bind(wx.EVT_MENU, self.view_ctrl.on_expand_all, item)
+        item = view_menu.Append(wx.ID_ANY, "&Collapse all\tCTRL+w",
+                                "Collapse all nodes")
+        self.Bind(wx.EVT_MENU, self.view_ctrl.on_collapse_all, item)
+        menu_bar.Append(view_menu, "&View")
+
+        self.SetMenuBar(menu_bar)
+        self.Bind(wx.EVT_CLOSE, lambda e: self.Show(False))

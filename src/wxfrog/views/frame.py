@@ -17,7 +17,7 @@ from ..utils import ThreadedStringIO
 _FD_STYLE_LOAD = wx.FD_OPEN | wx.FD_FILE_MUST_EXIST
 _FD_STYLE_SAVE = wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT | wx.FD_CHANGE_DIR
 
-wx.Log.SetLogLevel(0)
+wx.Log.SetLogLevel(0)  # prevent unnecessary warnings
 
 
 class FrogFrame(wx.Frame):
@@ -34,7 +34,6 @@ class FrogFrame(wx.Frame):
         self.monitor = EngineMonitor(self, out_stream)
         self.scenarios = ScenarioManager(self)
         self.results = ResultView(self)
-        self.results.Show()
 
         # hack, just to prevent that window can be sized far too big.
         #  it's a shame that wx doesn't support better control.

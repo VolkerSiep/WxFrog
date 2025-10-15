@@ -1,4 +1,4 @@
-from collections.abc import Mapping, Set
+from collections.abc import MutableMapping, Set
 from typing import Any
 from pint import Quantity
 
@@ -23,6 +23,7 @@ class Canvas(wx.ScrolledWindow):
         self._result_labels = []
         self._results_mode = False
         self._parameter_labels = []
+        self._dirty_parameter_ids = set()
 
         # configure bg picture and adapt virtual size
         self.svg_bg = config.get_svg(config["bg_picture_name"])
@@ -64,8 +65,14 @@ class Canvas(wx.ScrolledWindow):
 
     def draw_content(self, gc: wx.GraphicsContext):
         """Draw the SVG and all overlays onto the given GraphicsContext."""
-        def draw_labels(which):
+        def draw_labels(which, font_clean, color_clean,
+                        font_dirty=None, color_dirty=None):
+            font_dirty = font_clean if font_dirty is None else font_dirty
+            color_dirty = color_clean if color_dirty is None else color_dirty
             for e in which:
+                dirty = e["id"] in self._dirty_parameter_ids
+                gc.SetFont(font_dirty if dirty else font_clean,
+                           color_dirty if dirty else color_clean)
                 gc.DrawText(e["label"], *e["pos"])
                 if "hitbox" not in e:
                     extent = gc.GetFullTextExtent(e["label"])[:2]
@@ -82,10 +89,8 @@ class Canvas(wx.ScrolledWindow):
                  self.RESULT_VALID: BLACK,
                  self.RESULT_ERROR: ERROR_RED}[self._results_mode]
 
-        gc.SetFont(font, color)
-        draw_labels(self._result_labels)
-        gc.SetFont(font.Bold(), INPUT_BLUE)
-        draw_labels(self._parameter_labels)
+        draw_labels(self._result_labels, font, color)
+        draw_labels(self._parameter_labels, font, INPUT_BLUE, font.Bold())
 
     def on_paint(self, event):
         dc = wx.PaintDC(self)
@@ -120,6 +125,9 @@ class Canvas(wx.ScrolledWindow):
         mode = self.RESULT_VALID if original else self.RESULT_INVALID
         self.set_results_mode(mode)
         self._result_labels = self._entries(values, "results")
+        if original:
+            self._dirty_parameter_ids = set()
+
         self.Refresh()
 
     def update_parameters(self, values: DataStructure):
@@ -132,20 +140,22 @@ class Canvas(wx.ScrolledWindow):
                 q = values.get(item["path"])
             except KeyError:
                 return None
-            res = {"label": item["fmt"].format(q)}
-            res.update(item)
-            if "name" not in res:
-                res["name"] = ".".join(item["path"])
-            return res
+            entry = {"label": item["fmt"].format(q),
+                     "id": ".".join(item["path"])}
+            entry.update(item)
+            if "name" not in entry:
+                entry["name"] = entry["id"]
+            return entry
 
         res = [e(item) for item in self.config[which]]
         return [r for r in res if r is not None]
 
-    def show_parameter_dialog(self, item: Mapping[str, Any], value: Quantity,
-                              units: Set[str]):
+    def show_parameter_dialog(self, item: MutableMapping[str, Any],
+                              value: Quantity, units: Set[str]):
         dialog = ParameterDialog(self, item, value, units)
         if dialog.ShowModal() == wx.ID_OK:
             self.set_results_mode(self.RESULT_INVALID)
+            self._dirty_parameter_ids.add(item["id"])
             return dialog.value
         return None
 
