@@ -45,10 +45,10 @@ tables:
         fmt: "{:.3f~P}"
 
 units:
-  # all units that can be used
+  # all units that are predefined
   #  (above used units do not need to be repeated, but they can)
-  - m**3/h
-  - m**3/s
+  - m^3/h
+  - m^3/s
   - l/s
   - pint/s
   - degC

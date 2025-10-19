@@ -3,12 +3,13 @@ import wx
 from wx.dataview import (
     PyDataViewModel, DataViewItem, NullDataViewItem, DataViewCtrl,
     DV_HORIZ_RULES, DV_ROW_LINES, DV_VERT_RULES, DV_MULTIPLE,
-    EVT_DATAVIEW_ITEM_ACTIVATED, EVT_DATAVIEW_ITEM_CONTEXT_MENU)
+    EVT_DATAVIEW_ITEM_ACTIVATED, EVT_DATAVIEW_ITEM_CONTEXT_MENU,
+    EVT_DATAVIEW_ITEM_COLLAPSED, EVT_DATAVIEW_ITEM_EXPANDED)
 from pubsub import pub
 from pint import Quantity
 
 from wxfrog.engine import DataStructure
-from wxfrog.utils import fmt_unit
+from wxfrog.utils import fmt_unit, PathFilter
 from wxfrog.events import (
     RESULT_UNIT_CLICKED, NEW_UNIT_DEFINED, RESULT_UNIT_CHANGED)
 
@@ -17,10 +18,13 @@ class ResultViewModel(PyDataViewModel):
     def __init__(self):
         super().__init__()
         self.data = DataStructure()
+        self._filtered_data = self.data
+        self._filter_term = ""
         self._items = {}
 
     def set_data(self, data: DataStructure):
         self.data = data
+        self.apply_filter(self._filter_term)
         self._items = {}
         self.Cleared()
 
@@ -35,7 +39,7 @@ class ResultViewModel(PyDataViewModel):
         if not item:
             return True
         path = self.ItemToObject(item)
-        return isinstance(self.data.get(path), Mapping)
+        return isinstance(self._filtered_data.get(path), Mapping)
 
     def GetParent(self, item: DataViewItem) -> DataViewItem:
         if not item:
@@ -53,7 +57,7 @@ class ResultViewModel(PyDataViewModel):
     def GetChildren(self, item: DataViewItem,
                     children: list[DataViewItem]) -> int:
         path = self.ItemToObject(item) if item else ()
-        if isinstance(data := self.data.get(path), Mapping):
+        if isinstance(data := self._filtered_data.get(path), Mapping):
             for k in data:
                 children.append(self.ObjectToItem(path + (k, )))
         return len(children)
@@ -62,14 +66,10 @@ class ResultViewModel(PyDataViewModel):
         path = self.ItemToObject(item)
         if col == 0:
             return path[-1]
-        value = self.data.get(path)
+        value = self._filtered_data.get(path)
         if isinstance(value, Mapping):
             return ""
         return f"{value.m:.6g}" if col == 1 else f"{value.u:~P}"
-
-    def GetColumnCount(self):
-        return 2  # magnitude and value
-        # (maybe later checkbox for selecting for case studies)
 
     def all_values_changed(self):
         def dive(item: DataViewItem):
@@ -81,6 +81,22 @@ class ResultViewModel(PyDataViewModel):
                 self.ValueChanged(item, 1)
                 self.ValueChanged(item, 2)
         dive(NullDataViewItem)
+
+    def apply_filter(self, term: str):
+        def dive(d: DataStructure, path: tuple[str, ...]):
+            if isinstance(d, Mapping):
+                result = {k: dive(v, path + (k, )) for k, v in d.items()}
+                result =  {k: v for k, v in result.items() if v is not None}
+                return result if result else None
+            else:
+                return d if filter_.matches(path) else None
+
+        self._items = {}
+        self._filter_term = term
+        filter_ = PathFilter(term)
+        data = dive(self.data, ())
+        self._filtered_data = DataStructure({} if data is None else data)
+        self.Cleared()
 
 
 class UnitPopup(wx.PopupTransientWindow):
@@ -118,6 +134,8 @@ class ResultDataViewCtrl(DataViewCtrl):
 
         self.Bind(EVT_DATAVIEW_ITEM_ACTIVATED, self._on_item_activated)
         self.Bind(EVT_DATAVIEW_ITEM_CONTEXT_MENU, self._on_right_click)
+        self.Bind(EVT_DATAVIEW_ITEM_COLLAPSED, lambda e: self._get_expanded())
+        self.Bind(EVT_DATAVIEW_ITEM_EXPANDED, lambda e: self._get_expanded())
         self.model = ResultViewModel()
         self.AssociateModel(self.model)
         self.model.DecRef()
@@ -126,6 +144,10 @@ class ResultDataViewCtrl(DataViewCtrl):
         self.AppendTextColumn("Unit", 2, width=100)
         self._popup_ids = None
         self._mouse_event = None
+        self._expanded = set() # store all items (or ids) that are expanded
+        # whether to react to collapsed and expanded events right now
+        self._record_expanded = True
+        self._get_expanded()
 
     def _on_right_click(self, event):
         self._mouse_event = event
@@ -161,6 +183,46 @@ class ResultDataViewCtrl(DataViewCtrl):
             model.data.convert_all_possible_to(value.u)
         model.all_values_changed()
         pub.sendMessage(RESULT_UNIT_CHANGED)
+
+    def _get_expanded(self):
+        def dive(item: DataViewItem):
+            if not (model.IsContainer(item) and
+                    self.IsExpanded(item) or not item):
+                return
+            if item:
+                expanded.add(model.ItemToObject(item))
+            model.GetChildren(item, children := [])
+            for c in children:
+                dive(c)
+
+        if not self._record_expanded:
+            return
+        expanded = set()
+        model = self.model
+        dive(NullDataViewItem)
+        self._expanded = expanded
+
+    def _apply_expanded(self):
+        def dive(item: DataViewItem):
+            if not model.IsContainer(item):
+                return
+            expand = True
+            if item:
+                path = model.ItemToObject(item)
+                expand = path in self._expanded
+                if expand:
+                    expanded.add(path)
+            if not expand:
+                return
+            self.Expand(item)
+            model.GetChildren(item, children := [])
+            for c in children:
+                dive(c)
+
+        expanded = set()
+        model = self.model
+        dive(NullDataViewItem)
+        self._expanded = expanded
 
     def on_collapse_all(self, event):
         self.model.GetChildren(NullDataViewItem, children := [])
@@ -211,12 +273,28 @@ class ResultDataViewCtrl(DataViewCtrl):
         popup.SetMinSize(rect.Size)
         wx.CallAfter(popup.Popup)
 
+    def set_data(self, data: DataStructure):
+        self._record_expanded = False
+        self.model.set_data(data)
+        self._apply_expanded()
+        self._record_expanded = True
+
+    def on_search(self, term: str):
+        self._record_expanded = False
+        self.model.apply_filter(term)
+        self._apply_expanded()
+        self._record_expanded = True
+
 
 class ResultView(wx.Frame):
     def __init__(self, parent: wx.Window):
         style = wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER | wx.MAXIMIZE_BOX
         super().__init__(parent, id=wx.ID_ANY, title="Results", style=style)
         sizer = wx.BoxSizer(wx.VERTICAL)
+        self.search = wx.SearchCtrl(self, style=wx.TE_PROCESS_ENTER)
+        self.search.ShowCancelButton(True)
+        sizer.Add(self.search, 0, wx.EXPAND | wx.ALL, 3)
+
         self.view_ctrl = ResultDataViewCtrl(self)
         sizer.Add(self.view_ctrl, 1, wx.EXPAND | wx.ALL, 3)
         self.SetSizerAndFit(sizer)
@@ -234,3 +312,9 @@ class ResultView(wx.Frame):
 
         self.SetMenuBar(menu_bar)
         self.Bind(wx.EVT_CLOSE, lambda e: self.Show(False))
+        for e in (wx.EVT_SEARCH, wx.EVT_SEARCH_CANCEL,
+                  wx.EVT_KILL_FOCUS, wx.EVT_TEXT_ENTER):
+            self.search.Bind(e, self._on_search)
+
+    def _on_search(self, event):
+        self.view_ctrl.on_search(self.search.GetValue())

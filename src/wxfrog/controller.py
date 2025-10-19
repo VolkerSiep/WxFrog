@@ -182,7 +182,7 @@ class Controller:
         current = scn[SCENARIO_CURRENT].has_results()
         which = SCENARIO_CURRENT if current else SCENARIO_CONVERGED
         self.frame.canvas.update_results(scn[which].results, current)
-        self.frame.results.view_ctrl.model.set_data(scn[which].results)
+        self.frame.results.view_ctrl.set_data(scn[which].results)
 
     def _update_scenarios(self):
         scn = {name: (s.has_results(), s.mod_local_time())

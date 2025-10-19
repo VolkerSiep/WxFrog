@@ -1,5 +1,8 @@
+from collections.abc import Sequence
 from io import TextIOBase, StringIO
 from threading import Lock
+from re import compile
+
 from pint import UnitRegistry
 
 _unit_registry = UnitRegistry(autoconvert_offset_to_baseunit=True)
@@ -44,3 +47,35 @@ class ThreadedStringIO(TextIOBase):
 
     def flush(self):
         pass
+
+class PathFilter:
+    DOUBLE_STAR = r"([^.]+(\.[^.]+)<star>)"
+    SINGLE_STAR = r"[^.]?"
+
+    def __init__(self, search_term: str):
+        """Create a filter with given search term. Examples are:
+
+        - ``**.T``: Matches all paths ending with an element called ``T``.
+          Here, ``**`` is a wildcard matching one or many arbitrary elements
+          of the path
+        - ``a.b.c.M``: Matches only the path as provided (no wildcards)
+        - ``Synthesis.**.x.*``: Matches all paths that start with ``Synthesis``
+          and have ``x`` as the second-last element, such as the path
+          ``Synthesis/Reactor/Outlet/x/MeOH``.
+
+        """
+        if search_term:
+            st = search_term.replace("\\*", "\\<star>")
+            st = search_term.replace("**", self.DOUBLE_STAR)
+            st = st.replace("*", self.SINGLE_STAR)
+            st = st.replace("<star>", "*")
+            self._pattern = compile(f"^{st}$")
+        else:
+            self._pattern = None
+
+    def matches(self, path: Sequence[str]) -> bool:
+        """Return ``True`` if the path - as is -  is matched by the search term.
+        """
+        if self._pattern is None:
+            return True
+        return self._pattern.match(".".join(path)) is not None

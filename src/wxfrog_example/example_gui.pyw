@@ -6,7 +6,7 @@ from wxfrog import main, CalculationEngine, CalculationFailed, get_unit_registry
 
 Quantity = get_unit_registry().Quantity
 
-PAUSE_SECONDS = 1
+PAUSE_SECONDS = 0.1
 
 
 class MyModel(CalculationEngine):
@@ -30,8 +30,21 @@ class MyModel(CalculationEngine):
             sleep(PAUSE_SECONDS)
             print(f"Iteration {i} .. still doing nothing.", file=self.outstream)
         print(f"Now returning some fake values", file=self.outstream)
+
+        more = {"Heater": {"Shell": {"U": Quantity(500, "W/(m^2*K)"),
+                                     "Re": Quantity(43000),
+                                     "Pr": Quantity(0.7)},
+                           "Tube": {"U": Quantity(800, "W/(m^2*K)"),
+                                    "Re": Quantity(73000),
+                                    "Pr": Quantity(0.75)},
+                            "duty": Quantity(25, "MW")},
+                "Pump": {"power": Quantity(2, "MW"),
+                         "efficiency": Quantity(87, "%")}
+                }
+
         return {"y": Quantity(p2, "bar"),
                 "z": Quantity(43.425, "degC"),
+                "more": more,
                 "streams": {"s01": {"T": Quantity(20, "degC"),
                                     "p": p1},
                             "s02": {"T": Quantity(40, "degC"),
