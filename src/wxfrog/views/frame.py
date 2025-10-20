@@ -9,6 +9,7 @@ from .config_error_dialog import ConfigErrorDialog
 from .engine_monitor import EngineMonitor
 from .scenario import ScenarioManager
 from .results import ResultView
+from .about import AboutDialog
 from ..events import (
     EXPORT_CANVAS_GFX, RUN_MODEL, OPEN_SCENARIOS, OPEN_FILE, SAFE_FILE,
     SAFE_FILE_AS, EXIT_APP, RUN_CASE_STUDY, OPEN_RESULTS)
@@ -34,6 +35,7 @@ class FrogFrame(wx.Frame):
         self.monitor = EngineMonitor(self, out_stream)
         self.scenarios = ScenarioManager(self)
         self.results = ResultView(self)
+        self._about = AboutDialog(self, config["about"], config["about_size"])
 
         # hack, just to prevent that window can be sized far too big.
         #  it's a shame that wx doesn't support better control.
@@ -81,6 +83,11 @@ class FrogFrame(wx.Frame):
                                  "Show results")
         self.Bind(wx.EVT_MENU, lambda e: sendMessage(OPEN_RESULTS), item)
         menu_bar.Append(view_menu, "&Tools")
+
+        help_menu = wx.Menu()
+        item = help_menu.Append(wx.ID_ANY, "&About", "About this application")
+        self.Bind(wx.EVT_MENU, lambda e: self._about.ShowModal(), item)
+        menu_bar.Append(help_menu, "&Help")
 
         self.SetMenuBar(menu_bar)
         self.Bind(wx.EVT_CLOSE, lambda e: sendMessage(EXIT_APP, event=e))
