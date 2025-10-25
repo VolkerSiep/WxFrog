@@ -3,6 +3,7 @@ from dataclasses import dataclass, KW_ONLY, field
 from threading import Thread, Lock
 from itertools import product
 from copy import deepcopy
+from math import log
 
 from pubsub import pub
 
@@ -22,9 +23,16 @@ class ParameterSpec:
     _: KW_ONLY
     incr: Quantity = None
     num: Quantity = None
+    log: bool = False
     data: Sequence[Quantity] = field(init=False, repr=False, compare=False)
 
     def __post_init__(self):
+        if self.log:
+            self._post_init_log()
+        else:
+            self._post_init_linear()
+
+    def _post_init_linear(self):
         num, incr = self.num, self.incr
         min_, max_ = self.min, self.max
         interval = max_ - min_
@@ -34,8 +42,25 @@ class ParameterSpec:
             incr = interval / (num - 1) if num > 1 else min_ * 0
         else:
             assert num is None, "Only either num or incr can be specified"
+            if incr / interval < 0:
+                incr = -incr
             num = 1 + int(interval / incr)
-        self.data = [min_ + i * interval for i in range(num)]
+        self.data = [min_ + i * incr for i in range(num - 1)] + [max_]
+
+    def _post_init_log(self):
+        num, incr = self.num, self.incr
+        min_, max_ = self.min, self.max
+        ratio = max_ / min_
+        if incr is None:
+            if num is None:
+                num = 11
+            incr = ratio ** (1 / (num - 1)) if num > 1 else 1
+        else:
+            assert num is None, "Only either num or incr can be specified"
+            if (incr - 1) * (ratio - 1) < 0:
+                incr = 1 / incr
+            num = 1 + int(log(ratio) / log(incr))
+            self.data = [min_ * incr ** i for i in range(num - 1)] + [max_]
 
 
 class CaseStudyResults:
@@ -89,7 +114,8 @@ class CaseStudy:
         # make it possible to interrupt
         # fire events each time a result is obtained, and when it is ready
         def f():
-            for k, data in enumerate(product(*[s.data for s in specs])):
+            for k, data in enumerate(product(*[s.data for s in specs]),
+                                     start=1):
                 # set parameters
                 for p, d in zip(p_paths, data):
                     param.set(p, d)
@@ -104,8 +130,7 @@ class CaseStudy:
                         return
                 else:
                     results.add_result(param, DataStructure(res))
-                    pub.sendMessage(CASE_STUDY_PROGRESS,
-                                    results=results, k=k + 1)
+                    pub.sendMessage(CASE_STUDY_PROGRESS, results=results, k=k)
 
                 # catch if the case study was stopped.
                 self.lock.acquire()

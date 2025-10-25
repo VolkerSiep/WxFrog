@@ -126,12 +126,11 @@ class Controller:
             self.frame.update_title(path)
 
     def _on_exit_app(self, event):
-        print(EXIT_APP)
         # may ask to save file
         event.Skip()
 
     def _on_run_case_study(self):
-        print(RUN_CASE_STUDY)
+        self.frame.show_case_studies()
 
     def _on_show_parameter(self, item):
         scn_current = self.model.scenarios[SCENARIO_CURRENT]

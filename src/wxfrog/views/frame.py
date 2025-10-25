@@ -9,6 +9,7 @@ from .config_error_dialog import ConfigErrorDialog
 from .engine_monitor import EngineMonitor
 from .scenario import ScenarioManager
 from .results import ResultView
+from .casestudy import CaseStudyDialog
 from .about import AboutDialog
 from ..events import (
     EXPORT_CANVAS_GFX, RUN_MODEL, OPEN_SCENARIOS, OPEN_FILE, SAFE_FILE,
@@ -35,6 +36,7 @@ class FrogFrame(wx.Frame):
         self.monitor = EngineMonitor(self, out_stream)
         self.scenarios = ScenarioManager(self)
         self.results = ResultView(self)
+        self.case_studies = CaseStudyDialog(self)
         self._about = AboutDialog(self, config["about"], config["about_size"])
 
         # hack, just to prevent that window can be sized far too big.
@@ -126,3 +128,6 @@ class FrogFrame(wx.Frame):
         dialog = ConfigErrorDialog(self, errors)
         dialog.ShowModal()
         self.Close()
+
+    def show_case_studies(self):
+        self.case_studies.Show()

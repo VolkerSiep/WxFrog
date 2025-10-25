@@ -23,9 +23,9 @@ class QuantityCtrl(wx.Window):
         value_str = f"{value.m:.7g}"
         unit_str = fmt_unit(value.u)
         self.value = value
-        Q = get_unit_registry().Quantity
-        self.min = None if min_value is None else Q(min_value, unit_str)
-        self.max = None if max_value is None else Q(max_value, unit_str)
+        qty_cls = get_unit_registry().Quantity
+        self.min = None if min_value is None else qty_cls(min_value, value.u)
+        self.max = None if max_value is None else qty_cls(max_value, value.u)
         self.units = set(units)
 
         self.magnitude_ctrl = wx.TextCtrl(
@@ -130,8 +130,8 @@ class QuantityCtrl(wx.Window):
             show_error("Invalid number format")
             return
 
-        Quantity = get_unit_registry().Quantity
-        self.value = Quantity(new_value, self.value.u)
+        qty_cls = get_unit_registry().Quantity
+        self.value = qty_cls(new_value, self.value.u)
         self._fire_change_event()
 
     def _fire_change_event(self):
