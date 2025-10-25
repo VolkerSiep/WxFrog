@@ -5,10 +5,10 @@ from datetime import datetime
 from pubsub import pub
 import wx
 from wx.lib.mixins import listctrl
-from ..scenarios import SCENARIO_CURRENT, SCENARIO_CONVERGED, SCENARIO_DEFAULT
+from wxfrog.models.scenarios import SCENARIO_CURRENT, SCENARIO_CONVERGED, SCENARIO_DEFAULT
 from .colors import ERROR_RED, WARNING_ORANGE
 from ..events import (
-    COPY_SCENARIO, RENAME_SCENARIO, DELETE_SCENARIO, ACTIVATE_SCENARIO)
+    COPY_SCENARIO, RENAME_SCENARIO, DELETE_SCENARIO)
 
 class ScenarioNameDialog(wx.Dialog):
     def __init__(self, parent: wx.Window, names: Collection[str]):

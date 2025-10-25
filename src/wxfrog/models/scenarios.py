@@ -2,7 +2,8 @@ from datetime import UTC, datetime
 from collections.abc import Sequence
 from typing import Self
 from pint import Quantity
-from .engine import DataStructure, JSONType
+
+from ..utils import DataStructure, JSONType
 
 
 SCENARIO_DEFAULT = "* Default"

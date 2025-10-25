@@ -1,11 +1,21 @@
-from collections.abc import Sequence
+from typing import Self, Union
+from collections.abc import Sequence, MutableMapping, Mapping
 from io import TextIOBase, StringIO
 from threading import Lock
 from re import compile
 
-from pint import UnitRegistry
+from pint import UnitRegistry, Quantity, Unit, DimensionalityError
+
 
 _unit_registry = UnitRegistry(autoconvert_offset_to_baseunit=True)
+
+JSONScalar = str | int | float | bool | None
+JSONType = JSONScalar | Sequence["JSONType"] | Mapping[str, "JSONType"]
+NestedStringMap = Mapping[str, Union[str, "NestedStringMap"]]
+
+# pycharm warning in next line, as Quantity is not a proper class - not my fault
+NestedQuantityMap = Mapping[str, Union[Quantity, "NestedQualityMap"]]
+
 
 
 def set_unit_registry(registry: UnitRegistry):
@@ -48,6 +58,7 @@ class ThreadedStringIO(TextIOBase):
     def flush(self):
         pass
 
+
 class PathFilter:
     DOUBLE_STAR = r"([^.]+(\.[^.]+)<star>)"
     SINGLE_STAR = r"[^.]?"
@@ -79,3 +90,60 @@ class PathFilter:
         if self._pattern is None:
             return True
         return self._pattern.match(".".join(path)) is not None
+
+
+class DataStructure(dict, NestedQuantityMap):
+    def get(self, path: Sequence[str]):
+        res = self
+        for p in path:
+            res = res[p]
+        return res
+
+    def set(self, path: Sequence[str], value: Quantity):
+        node = self.get(path[:-1])
+        node[path[-1]] = value
+
+    def to_jsonable(self) -> NestedStringMap:
+        dive = self._dive(lambda x: f"{x:.14g~}")
+        return dive(self)
+
+    def convert_all_possible_to(self, unit: Unit):
+        def dive(structure: MutableMapping):
+           for k, v in structure.items():
+               if isinstance(v, MutableMapping):
+                   dive(v)
+                   continue
+               try:
+                   structure[k] = v.to(unit)
+               except DimensionalityError:
+                   pass
+        dive(self)
+
+    @property
+    def all_paths(self) -> Sequence[tuple[str, ...]]:
+        def dive(struct: NestedQuantityMap, path: list[str]):
+            if not isinstance(struct, Mapping):
+                return True
+            for k, v in struct.items():
+                p = path + [k]
+                if dive(v, p):
+                    paths.append(tuple(p))
+            return False
+
+        paths = []
+        dive(self, [])
+        return paths
+
+    @classmethod
+    def from_jsonable(cls, nested_data: NestedStringMap) -> Self:
+        dive = cls._dive(get_unit_registry().Quantity)
+        return DataStructure(dive(nested_data))
+
+    @staticmethod
+    def _dive(func):
+        def dive(struct):
+            if isinstance(struct, Mapping):
+                return {k: dive(v) for k, v in struct.items()}
+            else:
+                return func(struct)
+        return dive

@@ -3,7 +3,7 @@ from importlib.resources.abc import Traversable
 import wx
 
 from .controller import Controller
-from .engine import CalculationEngine
+from .models.engine import CalculationEngine
 
 
 class WxFrogApp(wx.App):

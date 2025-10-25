@@ -4,15 +4,13 @@ from pubsub import pub
 from zipfile import ZipFile, ZIP_DEFLATED
 from json import dumps, load
 import wx
-from wx.dataview import DataViewEvent
-from pint import Quantity
 
-from .engine import CalculationEngine
+from .models.engine import CalculationEngine
+from .models.model import Model
 from .views.frame import FrogFrame
-from .model import Model
 from .config import Configuration
 from .events import *
-from .scenarios import SCENARIO_CURRENT, SCENARIO_CONVERGED
+from wxfrog.models.scenarios import SCENARIO_CURRENT, SCENARIO_CONVERGED
 
 
 class Controller:

@@ -8,10 +8,8 @@ from wx.dataview import (
 from pubsub import pub
 from pint import Quantity
 
-from wxfrog.engine import DataStructure
-from wxfrog.utils import fmt_unit, PathFilter
-from wxfrog.events import (
-    RESULT_UNIT_CLICKED, NEW_UNIT_DEFINED, RESULT_UNIT_CHANGED)
+from ..utils import fmt_unit, PathFilter, DataStructure
+from ..events import RESULT_UNIT_CLICKED, NEW_UNIT_DEFINED, RESULT_UNIT_CHANGED
 
 
 class ResultViewModel(PyDataViewModel):

@@ -6,14 +6,14 @@ from copy import deepcopy
 from pint import DimensionalityError, DefinitionSyntaxError, UndefinedUnitError
 from pubsub import pub
 
-from .utils import fmt_unit, ThreadedStringIO, get_unit_registry
-from .engine import (
-    CalculationEngine, DataStructure, Quantity, CalculationFailed)
-from .config import (
+from wxfrog.utils import (
+    fmt_unit, ThreadedStringIO, get_unit_registry, DataStructure, Quantity)
+from .engine import CalculationEngine, CalculationFailed
+from wxfrog.config import (
     Configuration, ConfigurationError, ParameterNotFound, UnitSyntaxError,
     UndefinedUnit, UnitConversionError, OutOfBounds)
 
-from .events import (INITIALIZATION_DONE, CALCULATION_DONE, CALCULATION_FAILED)
+from wxfrog.events import (INITIALIZATION_DONE, CALCULATION_DONE, CALCULATION_FAILED)
 from .scenarios import (Scenario, SCENARIO_DEFAULT, SCENARIO_CURRENT,
                         SCENARIO_CONVERGED)
 
@@ -25,6 +25,7 @@ class Model:
         self._out_stream = ThreadedStringIO()
         self._all_units = set()
         self._scenarios = {}
+        self._case_studies = {}
         self.file_path = None
 
     def initialise_engine(self):
@@ -74,8 +75,8 @@ class Model:
         return result | {fmt_unit(value.u)}
 
     def register_unit(self, unit):
-        Unit = get_unit_registry().Unit
-        self._all_units.add(fmt_unit(Unit(unit)))
+        unit_cls = get_unit_registry().Unit
+        self._all_units.add(fmt_unit(unit_cls(unit)))
 
     def _initialize_parameters(self, param: DataStructure
                                ) -> Collection[ConfigurationError]:

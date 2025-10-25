@@ -1,62 +1,11 @@
 from abc import ABC, abstractmethod
-from typing import Union, Self
-from collections.abc import Mapping, Sequence, MutableMapping
 from io import TextIOBase
-from pint import Quantity, Unit, DimensionalityError
 
-from wxfrog.utils import get_unit_registry
-
-JSONScalar = str | int | float | bool | None
-JSONType = JSONScalar | Sequence["JSONType"] | Mapping[str, "JSONType"]
-NestedStringMap = Mapping[str, Union[str, "NestedStringMap"]]
-
-# pycharm warning in next line, as Quantity is not a proper class - not my fault
-NestedQuantityMap = Mapping[str, Union[Quantity, "NestedQualityMap"]]
-
-
-class DataStructure(dict, NestedQuantityMap):
-    def get(self, path: Sequence[str]):
-        res = self
-        for p in path:
-            res = res[p]
-        return res
-
-    def set(self, path: Sequence[str], value: Quantity):
-        node = self.get(path[:-1])
-        node[path[-1]] = value
-
-    def to_jsonable(self) -> NestedStringMap:
-        dive = self._dive(lambda x: f"{x:.14g~}")
-        return dive(self)
-
-    def convert_all_possible_to(self, unit: Unit):
-        def dive(structure: MutableMapping):
-           for k, v in structure.items():
-               if isinstance(v, MutableMapping):
-                   dive(v)
-                   continue
-               try:
-                   structure[k] = v.to(unit)
-               except DimensionalityError:
-                   pass
-        dive(self)
-
-    @classmethod
-    def from_jsonable(cls, nested_data: NestedStringMap) -> Self:
-        dive = cls._dive(get_unit_registry().Quantity)
-        return DataStructure(dive(nested_data))
-
-    @staticmethod
-    def _dive(func):
-        def dive(struct):
-            if isinstance(struct, Mapping):
-                return {k: dive(v) for k, v in struct.items()}
-            else:
-                return func(struct)
-        return dive
+from wxfrog.utils import NestedQuantityMap, JSONType
 
 
 class CalculationFailed(ValueError):
+    """Exception to be thrown if the calculation fails"""
     pass
 
 class CalculationEngine(ABC):

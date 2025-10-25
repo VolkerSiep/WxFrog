@@ -82,7 +82,7 @@ class FrogFrame(wx.Frame):
         item = view_menu.Append(wx.ID_ANY, "&All Results\tCTRL+a",
                                  "Show results")
         self.Bind(wx.EVT_MENU, lambda e: sendMessage(OPEN_RESULTS), item)
-        menu_bar.Append(view_menu, "&Tools")
+        menu_bar.Append(view_menu, "&View")
 
         help_menu = wx.Menu()
         item = help_menu.Append(wx.ID_ANY, "&About", "About this application")

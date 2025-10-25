@@ -5,9 +5,10 @@ from pint import Quantity
 import wx
 from pubsub.pub import sendMessage
 
-from src.wxfrog.config import Configuration
+from ..config import Configuration
 from ..events import SHOW_PARAMETER_IN_CANVAS
-from ..engine import DataStructure
+from ..utils import DataStructure
+
 from .parameter import ParameterDialog
 from .colors import INPUT_BLUE, BLACK, ERROR_RED, LIGHT_GREY
 
