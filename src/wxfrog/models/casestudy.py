@@ -3,7 +3,7 @@ from dataclasses import dataclass, KW_ONLY, field
 from threading import Thread, Lock
 from itertools import product
 from copy import deepcopy
-from math import log
+from math import log, ceil
 
 from pubsub import pub
 from pint.registry import Quantity  # actual type
@@ -48,23 +48,25 @@ class ParameterSpec:
             assert num is None, "Only either num or incr can be specified"
             if incr / interval < 0:
                 incr = -incr
-            num = 1 + int(interval / incr)
+            num = 1 + ceil(interval / incr)
         self.data = [min_ + i * incr for i in range(num - 1)] + [max_]
+        self.num, self.incr = num, incr
 
     def _post_init_log(self):
         num, incr = self.num, self.incr
         min_, max_ = self.min, self.max
-        ratio = max_ / min_
+        ratio = (max_ / min_).to("")
         if incr is None:
             if num is None:
                 num = 11
             incr = ratio ** (1 / (num - 1)) if num > 1 else 1
         else:
             assert num is None, "Only either num or incr can be specified"
-            if (incr - 1) * (ratio - 1) < 0:
-                incr = 1 / incr
-            num = 1 + int(log(ratio) / log(incr))
-            self.data = [min_ * incr ** i for i in range(num - 1)] + [max_]
+        if (incr - 1) * (ratio - 1) < 0:
+            incr = 1 / incr
+        num = 1 + ceil(log(ratio) / log(incr))
+        self.data = [min_ * incr ** i for i in range(num - 1)] + [max_]
+        self.num, self.incr = num, incr
 
 
 class CaseStudyResults:
