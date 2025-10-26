@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 from collections.abc import Sequence
 from typing import Self
-from pint import Quantity
+from pint.registry import Quantity
 
 from ..utils import DataStructure, JSONType
 

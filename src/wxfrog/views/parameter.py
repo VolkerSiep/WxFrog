@@ -1,5 +1,5 @@
 from pubsub import pub
-from pint import Quantity
+from pint.registry import Quantity
 import wx
 
 from ..events import NEW_UNIT_DEFINED

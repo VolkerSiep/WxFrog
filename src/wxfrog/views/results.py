@@ -6,7 +6,7 @@ from wx.dataview import (
     EVT_DATAVIEW_ITEM_ACTIVATED, EVT_DATAVIEW_ITEM_CONTEXT_MENU,
     EVT_DATAVIEW_ITEM_COLLAPSED, EVT_DATAVIEW_ITEM_EXPANDED)
 from pubsub import pub
-from pint import Quantity
+from pint.registry import Quantity
 
 from ..utils import fmt_unit, PathFilter, DataStructure
 from ..events import RESULT_UNIT_CLICKED, NEW_UNIT_DEFINED, RESULT_UNIT_CHANGED

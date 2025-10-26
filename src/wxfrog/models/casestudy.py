@@ -6,8 +6,9 @@ from copy import deepcopy
 from math import log
 
 from pubsub import pub
+from pint.registry import Quantity  # actual type
 
-from wxfrog.utils import Quantity, DataStructure
+from wxfrog.utils import DataStructure
 from .engine import CalculationEngine, CalculationFailed
 from .scenarios import Scenario
 from ..events import CALCULATION_FAILED, CASE_STUDY_ENDED, CASE_STUDY_PROGRESS
@@ -21,12 +22,15 @@ class ParameterSpec:
     min: Quantity
     max: Quantity
     _: KW_ONLY
+    name: str = None
     incr: Quantity = None
-    num: Quantity = None
+    num: int = None
     log: bool = False
     data: Sequence[Quantity] = field(init=False, repr=False, compare=False)
 
     def __post_init__(self):
+        if self.name is None:
+            self.name = ".".join(self.path)
         if self.log:
             self._post_init_log()
         else:

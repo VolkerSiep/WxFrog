@@ -2,9 +2,9 @@ from collections.abc import Collection
 
 import wx
 from wx.lib.newevent import NewCommandEvent
-from pint import (Quantity, Unit, DimensionalityError, DefinitionSyntaxError,
+from pint import (Unit, DimensionalityError, DefinitionSyntaxError,
                   UndefinedUnitError)
-
+from pint.registry import Quantity
 from ..utils import fmt_unit, get_unit_registry
 from .colors import ERROR_RED, LIGHT_GREY
 
@@ -106,7 +106,8 @@ class QuantityCtrl(wx.Window):
             self.value = new_value
             self.magnitude_ctrl.SetValue(f"{self.value.m:.7g}")
         else:
-            self.value = Quantity(self.value.m, cand_fmt)
+            qty_cls = get_unit_registry().Quantity
+            self.value = qty_cls(self.value.m, cand_fmt)
 
         self._fire_change_event()
 

@@ -1,30 +1,21 @@
 import wx
 
+from wxfrog.models.casestudy import ParameterSpec
+from .auxiliary import PopupBase
 
-class NamePopup(wx.PopupTransientWindow):
-    # TODO: make this class, so it can be injected with the control I want to show!
-    #  .. here just a text control, in ResultDataView a combo-box with units,
-    #  .. and for min, max and incr a QuantityCtrl.
-    #  .. maybe best is to make this a baseclass.
-    def __init__(self, parent: wx.Window, value: str, callback, size: wx.Size):
-        super().__init__(parent, flags=wx.BORDER_SIMPLE)
-        pnl = wx.Panel(self)
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        text = wx.TextCtrl(pnl, value=value, style=wx.TE_PROCESS_ENTER)
-        text.SetMinSize(size + wx.Size(4, 4))
 
-        sizer.Add(text, 1, wx.EXPAND | wx.ALL, 2)
-        pnl.SetSizerAndFit(sizer)
-        self.SetClientSize(pnl.GetSize())
+class NamePopup(PopupBase):
+    def __init__(self, parent: wx.Window, value: str, callback,
+                 rect: wx.Rect):
+        super().__init__(parent, rect, value, callback)
+        self.bind_ctrl(wx.EVT_TEXT_ENTER)
 
-        self.Bind(wx.EVT_KILL_FOCUS, lambda e: self.Dismiss())
-        text.Bind(wx.EVT_TEXT_ENTER, self.callback)
+    def create_ctrl(self, parent: wx.Window, initial_value):
+        return wx.TextCtrl(parent, value=initial_value,
+                           style=wx.TE_PROCESS_ENTER)
 
-        self._callback = callback
-
-    def callback(self, event):
-        self._callback(event.GetString())
-        self.Dismiss()
+    def collect_result(self, event: wx.CommandEvent, ctrl):
+        return event.GetString()
 
 
 class ParameterListCtrl(wx.ListCtrl):
@@ -44,6 +35,7 @@ class ParameterListCtrl(wx.ListCtrl):
         self.Bind(wx.EVT_SIZE, self._on_size)
         self.Bind(wx.EVT_LIST_COL_END_DRAG, self._on_column_resized)
         self.Bind(wx.EVT_LEFT_DCLICK, self._on_item_activated)
+
         # TODO: fake data, to be removed later
         self.InsertItem(0, "A.B.C")
         self.SetItem(0, 1, "Hansi")
@@ -76,12 +68,8 @@ class ParameterListCtrl(wx.ListCtrl):
         def commit(value):
             self.SetItem(item, 1, value)
 
-        pos = self.ClientToScreen(rect.GetPosition()) - wx.Point(4, 4)
-
         name = self.GetItemText(item, col=1)
-        popup = NamePopup(self, name, commit, rect.GetSize())
-        popup.SetPosition(pos)
-        popup.SetMinSize(rect.GetSize())
+        popup = NamePopup(self, name, commit, rect)
         wx.CallAfter(popup.Popup)
 
 

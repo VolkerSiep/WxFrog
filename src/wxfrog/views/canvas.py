@@ -1,6 +1,6 @@
 from collections.abc import MutableMapping, Set
 from typing import Any
-from pint import Quantity
+from pint.registry import Quantity
 
 import wx
 from pubsub.pub import sendMessage

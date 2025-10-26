@@ -3,7 +3,7 @@ from importlib.resources.abc import Traversable
 from collections.abc import Sequence
 from yaml import safe_load
 from wx.svg import SVGimage
-from pint import Quantity
+from pint.registry import Quantity
 
 
 CONFIG_FILENAME = "configuration.yml"

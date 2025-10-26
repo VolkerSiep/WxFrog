@@ -72,6 +72,10 @@ units:
   - kg/s
   - t/h
   - t/d
+  - barg
+  - kPag
+  - dog_year
+  - 1/inverse_kilo_kelvin
 
 
 

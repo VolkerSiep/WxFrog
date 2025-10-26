@@ -1,4 +1,6 @@
-from wxfrog.utils import DataStructure, Quantity
+from wxfrog.utils import DataStructure, get_unit_registry
+
+Q = get_unit_registry().Quantity
 
 def test_get(sample_structure):
     path = ("Heater", "Shell", "Pr")
@@ -7,7 +9,7 @@ def test_get(sample_structure):
 def test_set(sample_structure):
     path = ("Heater", "Shell", "Pr")
     new_value = 0.8
-    sample_structure.set(path, Quantity(new_value))
+    sample_structure.set(path, Q(new_value))
     assert float(sample_structure.get(path)) == new_value
 
 def test_tojson(sample_structure):

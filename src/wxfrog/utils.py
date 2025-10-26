@@ -1,34 +1,34 @@
-from typing import Self, Union
+from typing import Self, Union, Optional
 from collections.abc import Sequence, MutableMapping, Mapping
 from io import TextIOBase, StringIO
 from threading import Lock
 from re import compile
 
-from pint import UnitRegistry, Quantity, Unit, DimensionalityError
+from pint import UnitRegistry, Unit, DimensionalityError
+from pint.registry import Quantity, Unit
 
-
-_unit_registry = UnitRegistry(autoconvert_offset_to_baseunit=True)
 
 JSONScalar = str | int | float | bool | None
 JSONType = JSONScalar | Sequence["JSONType"] | Mapping[str, "JSONType"]
 NestedStringMap = Mapping[str, Union[str, "NestedStringMap"]]
-
-# pycharm warning in next line, as Quantity is not a proper class - not my fault
 NestedQuantityMap = Mapping[str, Union[Quantity, "NestedQualityMap"]]
 
+_unit_registry: Optional[UnitRegistry] = None
 
 
 def set_unit_registry(registry: UnitRegistry):
     global _unit_registry
-    _unit_registry = registry
     registry.autoconvert_offset_to_baseunit = True
+    _unit_registry = registry
 
 
 def get_unit_registry() -> UnitRegistry:
+    if _unit_registry is None:
+        set_unit_registry(UnitRegistry())
     return _unit_registry
 
 
-def fmt_unit(unit: _unit_registry.Unit):
+def fmt_unit(unit: Unit):
     result = f"{unit:~P#}"
     return result.replace(" ", "")
 

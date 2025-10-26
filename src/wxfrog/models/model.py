@@ -4,10 +4,11 @@ from threading import Thread
 from copy import deepcopy
 
 from pint import DimensionalityError, DefinitionSyntaxError, UndefinedUnitError
+from pint.registry import Quantity
 from pubsub import pub
 
 from wxfrog.utils import (
-    fmt_unit, ThreadedStringIO, get_unit_registry, DataStructure, Quantity)
+    fmt_unit, ThreadedStringIO, get_unit_registry, DataStructure)
 from .engine import CalculationEngine, CalculationFailed
 from wxfrog.config import (
     Configuration, ConfigurationError, ParameterNotFound, UnitSyntaxError,
@@ -81,7 +82,7 @@ class Model:
     def _initialize_parameters(self, param: DataStructure
                                ) -> Collection[ConfigurationError]:
         errors = []
-        Q = get_unit_registry().Quantity
+        qty_cls = get_unit_registry().Quantity
         for item in self._configuration["parameters"]:
             path = item["path"]
             try:
@@ -103,9 +104,9 @@ class Model:
                 continue
             v = param.get(path)
             i_min, i_max = item["min"], item["max"]
-            if i_max is not None and v > (v_max := Q(i_max, v.u)):
+            if i_max is not None and v > (v_max := qty_cls(i_max, v.u)):
                 errors.append(OutOfBounds(path, v, v_max, True))
-            elif i_min is not None and v < (v_min := Q(i_min, v.u)):
+            elif i_min is not None and v < (v_min := qty_cls(i_min, v.u)):
                 errors.append(OutOfBounds(path, v, v_min, False))
         return errors
 
