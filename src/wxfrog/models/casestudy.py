@@ -27,10 +27,12 @@ class ParameterSpec:
     num: int = None
     log: bool = False
     data: Sequence[Quantity] = field(init=False, repr=False, compare=False)
+    num_spec: bool = field(init=False, repr=False, compare=False)
 
     def __post_init__(self):
         if self.name is None:
             self.name = ".".join(self.path)
+        self.num_spec = self.incr is None
         if self.log:
             self._post_init_log()
         else:
@@ -40,7 +42,7 @@ class ParameterSpec:
         num, incr = self.num, self.incr
         min_, max_ = self.min, self.max
         interval = max_ - min_
-        if incr is None:
+        if self.num_spec:
             if num is None:
                 num = 11
             incr = interval / (num - 1) if num > 1 else min_ * 0
@@ -56,7 +58,7 @@ class ParameterSpec:
         num, incr = self.num, self.incr
         min_, max_ = self.min, self.max
         ratio = (max_ / min_).to("")
-        if incr is None:
+        if self.num_spec:
             if num is None:
                 num = 11
             incr = ratio ** (1 / (num - 1)) if num > 1 else 1
@@ -139,9 +141,8 @@ class CaseStudy:
                     pub.sendMessage(CASE_STUDY_PROGRESS, results=results, k=k)
 
                 # catch if the case study was stopped.
-                self.lock.acquire()
-                interrupt = self._interrupt
-                self.lock.release()
+                with self.lock:
+                    interrupt = self._interrupt
                 if interrupt:
                     break
 
@@ -158,6 +159,5 @@ class CaseStudy:
         Thread(target=f, daemon=True).start()
 
     def interrupt(self):
-        self.lock.acquire()
-        self._interrupt = True
-        self.lock.release()
+        with self.lock:
+            self._interrupt = True

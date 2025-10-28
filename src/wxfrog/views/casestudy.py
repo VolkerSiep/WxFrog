@@ -1,7 +1,48 @@
+from collections.abc import Mapping
+
 import wx
 
 from wxfrog.models.casestudy import ParameterSpec
+from wxfrog.models.scenarios import Scenario
 from .auxiliary import PopupBase
+from ..utils import DataStructure
+
+
+class ParameterSelectDialog(wx.Dialog):
+    def __init__(self, parent: wx.Window, parameters: DataStructure):
+        super().__init__(parent, title="Select a parameter")
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        style = wx.TR_HAS_BUTTONS | wx.TR_HIDE_ROOT
+        self.tree = wx.TreeCtrl(self, style=style)
+        self.tree.SetMinSize(wx.Size(500, 500))
+        sizer.Add(self.tree, 1, wx.EXPAND | wx.ALL, 3)
+
+        def populate(node, structure):
+            for key, value in structure.items():
+                child = self.tree.AppendItem(node, key)
+                if isinstance(value, Mapping):
+                    populate(child, value)
+
+        root = self.tree.AddRoot("Root")
+        populate(root, parameters)
+        self.SetSizerAndFit(sizer)
+
+        self.tree.Bind(wx.EVT_TREE_ITEM_ACTIVATED, self._on_activated)
+        self.chosen = None
+
+
+    def _on_activated(self, event):
+        item = event.GetItem()
+        if self.tree.ItemHasChildren(item):
+            return  # can only select
+        root = self.tree.GetRootItem()
+        path = []
+        while item != root:
+            path.append(self.tree.GetItemText(item))
+            item = self.tree.GetItemParent(item)
+        self.chosen = tuple(reversed(path))
+        self.EndModal(wx.ID_OK)
+
 
 
 class NamePopup(PopupBase):
@@ -35,15 +76,6 @@ class ParameterListCtrl(wx.ListCtrl):
         self.Bind(wx.EVT_SIZE, self._on_size)
         self.Bind(wx.EVT_LIST_COL_END_DRAG, self._on_column_resized)
         self.Bind(wx.EVT_LEFT_DCLICK, self._on_item_activated)
-
-        # TODO: fake data, to be removed later
-        self.InsertItem(0, "A.B.C")
-        self.SetItem(0, 1, "Hansi")
-        self.SetItem(0, 2, "10 t/h")
-        self.SetItem(0, 3, "100 t/h")
-        self.SetItem(0, 4, "10 t/h")
-        self.SetItem(0, 5, "")
-        self.SetItem(0, 6, "No")
 
 
     def _on_item_activated(self, event):
@@ -88,6 +120,21 @@ class ParameterListCtrl(wx.ListCtrl):
         self.SetColumnWidth(len(self.columns) - 1, new_w[-1])
         self.columns = [[n, nw] for (n, _), nw in zip(self.columns, new_w)]
 
+    def add(self, spec: ParameterSpec):
+        idx = self.GetItemCount()
+        name = ".".join(spec.path)
+        self.InsertItem(idx, name)
+        self.update(idx, spec)
+
+    def update(self, idx, spec):
+        name = ".".join(spec.path)
+        self.SetItem(idx, 1, name)
+        self.SetItem(idx, 2, f"{spec.min:.6g~P}")
+        self.SetItem(idx, 3, f"{spec.max:.6g~P}")
+        self.SetItem(idx, 4, f"{spec.incr:.6g~P}")
+        self.SetItem(idx, 5, f"{spec.num}")
+        self.SetItem(idx, 6, "Yes" if spec.log else "No")
+
 
 class CaseStudyDialog(wx.Dialog):
     def __init__(self, parent: wx.Window):
@@ -100,7 +147,7 @@ class CaseStudyDialog(wx.Dialog):
         icon_size = wx.Size(16, 16)
         sizer_2 = wx.BoxSizer(wx.HORIZONTAL)
 
-        btn_data = [("add", wx.ART_PLUS, True, lambda x: None),
+        btn_data = [("add", wx.ART_PLUS, False, self._on_add),
                     ("up", wx.ART_GO_UP, False, lambda x: None),
                     ("down", wx.ART_GO_DOWN, False, lambda x: None),
                     ("del", wx.ART_CROSS_MARK, False, lambda x: None),
@@ -110,6 +157,7 @@ class CaseStudyDialog(wx.Dialog):
             bmp = wx.ArtProvider.GetBitmap(icon , wx.ART_BUTTON, icon_size)
             btn = wx.BitmapButton(self, bitmap=wx.BitmapBundle(bmp))
             btn.Enable(enabled)
+            btn.Bind(wx.EVT_BUTTON, call_back)
             self.buttons[name] = btn
 
         (run_btn := wx.Button(self, label="Run")).Enable(False)
@@ -122,3 +170,22 @@ class CaseStudyDialog(wx.Dialog):
             sizer_2.Add(self.buttons[name], 0, wx.EXPAND | wx.ALL, 3)
         sizer.Add(sizer_2, 0, wx.EXPAND, 0)
         self.SetSizerAndFit(sizer)
+
+        self._scenario = None
+
+    def switch_button_enable(self, name: str, enabled: bool):
+        self.buttons[name].Enable(enabled)
+
+    def set_scenario(self, scenario: Scenario):
+        self._scenario = scenario
+
+    def _on_add(self, event):
+        # show tree dialog with parameters to select from
+        param = self._scenario.parameters
+        dialog = ParameterSelectDialog(self, param)
+        if dialog.ShowModal() == wx.ID_OK:
+            path = dialog.chosen
+            value = param.get(path)
+            spec = ParameterSpec(path, 0.9 * value, 1.1 * value, num=10)
+            self.list_ctrl.add(spec)
+

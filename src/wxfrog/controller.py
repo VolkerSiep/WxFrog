@@ -76,6 +76,7 @@ class Controller:
         if errors:
             wx.CallAfter(self.frame.show_config_error_dialog, errors)
         wx.CallAfter(self._update_parameters)
+        self.frame.case_studies.switch_button_enable("add", True)
         if self.configuration["run_engine_on_start"]:
             self._on_model_run()
 
@@ -130,7 +131,9 @@ class Controller:
         event.Skip()
 
     def _on_run_case_study(self):
-        self.frame.show_case_studies()
+        scn = self.model.scenarios[SCENARIO_CURRENT]
+        self.frame.case_studies.set_scenario(scn)
+        self.frame.show_case_studies(scn)
 
     def _on_show_parameter(self, item):
         scn_current = self.model.scenarios[SCENARIO_CURRENT]
