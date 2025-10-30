@@ -1,3 +1,4 @@
+from typing import Callable, Any
 from collections.abc import Mapping
 
 import wx
@@ -5,7 +6,9 @@ import wx
 from wxfrog.models.casestudy import ParameterSpec
 from wxfrog.models.scenarios import Scenario
 from .auxiliary import PopupBase
-from ..utils import DataStructure
+from .quantity_control import (
+    QuantityCtrl, QuantityChangedEvent, EVT_QUANTITY_CHANGED, EVT_UNIT_DEFINED)
+from ..utils import DataStructure, get_unit_registry
 
 
 class ParameterSelectDialog(wx.Dialog):
@@ -46,17 +49,30 @@ class ParameterSelectDialog(wx.Dialog):
 
 
 class NamePopup(PopupBase):
-    def __init__(self, parent: wx.Window, value: str, callback,
-                 rect: wx.Rect):
+    def __init__(self, parent: wx.Window, value: str, callback, rect: wx.Rect):
         super().__init__(parent, rect, value, callback)
         self.bind_ctrl(wx.EVT_TEXT_ENTER)
 
-    def create_ctrl(self, parent: wx.Window, initial_value):
+    def create_ctrl(self, parent, initial_value):
         return wx.TextCtrl(parent, value=initial_value,
                            style=wx.TE_PROCESS_ENTER)
 
     def collect_result(self, event: wx.CommandEvent, ctrl):
         return event.GetString()
+
+
+class QuantityPopup(PopupBase):
+    def __init__(self, parent: wx.Window, value: str, callback, rect: wx.Rect):
+        super().__init__(parent, rect, value, callback)
+        self.bind_ctrl(EVT_QUANTITY_CHANGED)
+
+    def create_ctrl(self, parent, initial_value):
+        qty_cls = get_unit_registry().Quantity
+        # TODO: Can I get predefined units and min/max values here?
+        return QuantityCtrl(parent, qty_cls(initial_value), [])
+
+    def collect_result(self, event: QuantityChangedEvent, ctrl):
+        return event
 
 
 class ParameterListCtrl(wx.ListCtrl):
@@ -69,7 +85,7 @@ class ParameterListCtrl(wx.ListCtrl):
                         ["Log", 40]]
         for k, (n, w) in enumerate(self.columns):
             self.InsertColumn(k, n, width=w)
-        print("Columns inserted")
+        self._parameters : list[ParameterSpec] = []
 
         width = sum(w for _, w in self.columns)
         self.SetMinSize(wx.Size(width, 300))
@@ -87,8 +103,13 @@ class ParameterListCtrl(wx.ListCtrl):
         rect = wx.Rect()
         self.GetSubItemRect(item, subitem, rect, wx.LIST_RECT_BOUNDS)
 
-        if subitem == 1:
-            self._on_change_name(item, rect)
+        callbacks : Mapping[int, Callable[[int, wx.Rect], None]] = {
+            1: self._on_edit_name,
+            2: self._on_edit_min
+        }
+
+        if subitem in callbacks:
+            callbacks[subitem](item, rect)
 
         # subitem branching
         # 1: Edit name
@@ -96,14 +117,25 @@ class ParameterListCtrl(wx.ListCtrl):
         # 5: Edit number
         # 6: Toggle log
 
-    def _on_change_name(self, item, rect):
+    def _on_edit_name(self, item, rect):
         def commit(value):
             self.SetItem(item, 1, value)
+            return True
 
         name = self.GetItemText(item, col=1)
         popup = NamePopup(self, name, commit, rect)
         wx.CallAfter(popup.Popup)
 
+    def _on_edit_min(self, item, rect):
+        def commit(event):
+            if not event.in_bounds:
+                return False
+            self.SetItem(item, 2, f"{event.new_value:.6g~P}")
+            return True
+
+        min_value = self.GetItemText(item, col=2)
+        popup = QuantityPopup(self, min_value, commit, rect)
+        wx.CallAfter(popup.Popup)
 
     def _on_size(self, event):
         size = event.GetSize()
@@ -124,9 +156,11 @@ class ParameterListCtrl(wx.ListCtrl):
         idx = self.GetItemCount()
         name = ".".join(spec.path)
         self.InsertItem(idx, name)
-        self.update(idx, spec)
+        self._parameters.append(spec)
+        self._update(idx)
 
-    def update(self, idx, spec):
+    def _update(self, idx):
+        spec = self._parameters[idx]
         name = ".".join(spec.path)
         self.SetItem(idx, 1, name)
         self.SetItem(idx, 2, f"{spec.min:.6g~P}")

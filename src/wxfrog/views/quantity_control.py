@@ -10,8 +10,16 @@ from .colors import ERROR_RED, LIGHT_GREY
 
 
 # create a new custom event class
-QuantityChangedEvent, EVT_QUANTITY_CHANGED = NewCommandEvent()
+_QuantityChangedEventBase, EVT_QUANTITY_CHANGED = NewCommandEvent()
 NewUnitDefinedEvent, EVT_UNIT_DEFINED = NewCommandEvent()
+
+
+class QuantityChangedEvent(_QuantityChangedEventBase):
+    def __init__(self, parent, value, in_bounds):
+        super().__init__(id=parent.GetId())
+        self.SetEventObject(parent)
+        self.new_value = value
+        self.in_bounds = in_bounds
 
 
 class QuantityCtrl(wx.Window):
@@ -55,7 +63,8 @@ class QuantityCtrl(wx.Window):
         sizer.Add(self.link_ctrl, 0, wx.ALIGN_CENTER_VERTICAL, 3)
         sizer_1.Add(sizer, 0, wx.EXPAND)
         sizer_1.Add(self.status, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 2)
-        self.SetSizer(sizer_1)
+        self.SetSizerAndFit(sizer_1)
+        self.SetMinSize(self.GetSize())
 
         self.unit_ctrl.Bind(wx.EVT_TEXT_ENTER, self._on_unit_changed)
         self.unit_ctrl.Bind(wx.EVT_COMBOBOX, self._on_unit_changed)
@@ -136,10 +145,7 @@ class QuantityCtrl(wx.Window):
         self._fire_change_event()
 
     def _fire_change_event(self):
-        evt = QuantityChangedEvent(self.GetId())
-        evt.SetEventObject(self)
-        evt.new_value = self.value
-        evt.in_bounds = self._check_bounds()
+        evt = QuantityChangedEvent(self, self.value, self._check_bounds())
         wx.PostEvent(self, evt)
 
     def _check_bounds(self) -> bool:

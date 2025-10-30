@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Callable
 import wx
 from wx.core import PyEventBinder
 
@@ -10,17 +10,23 @@ class PopupBase(wx.PopupTransientWindow):
     sent back to parent context via a callback.
     """
     def __init__(self, parent: wx.Window, rect: wx.Rect,
-                 initial_value, client_callback):
+                 initial_value, client_callback: Callable[[Any], bool]):
         super().__init__(parent, flags=wx.BORDER_SIMPLE)
         panel = wx.Panel(self)
         self._client_callback = client_callback
 
-        pos = parent.ClientToScreen(rect.GetPosition()) - wx.Point(4, 4)
-        self.SetPosition(pos)
-        size = rect.GetSize() + wx.Size(2, 2)
-        sizer = wx.BoxSizer(wx.VERTICAL)
         self._ctrl = self.create_ctrl(panel, initial_value)
-        self._ctrl.SetMinSize(size)
+        min_size = self._ctrl.GetMinSize()
+        size = rect.GetSize() + wx.Size(2, 2)
+        min_size = wx.Size(max(min_size.GetWidth(), size.GetWidth()),
+                           max(min_size.GetHeight(), size.GetHeight()))
+        self._ctrl.SetMinSize(min_size)
+        ds = min_size - size
+        print(ds)
+        offset = wx.Point(4 + ds.GetWidth() // 2, 4 + ds.GetHeight() // 2)
+        pos = parent.ClientToScreen(rect.GetPosition()) - offset
+        self.SetPosition(pos)
+        sizer = wx.BoxSizer(wx.VERTICAL)
 
         sizer.Add(self._ctrl, 1, wx.EXPAND | wx.ALL, 2)
         panel.SetSizerAndFit(sizer)
@@ -46,5 +52,5 @@ class PopupBase(wx.PopupTransientWindow):
 
     def _callback(self, event):
         result = self.collect_result(event, self._ctrl)
-        self._client_callback(result)
-        self.Dismiss()
+        if self._client_callback(result):
+            self.Dismiss()
