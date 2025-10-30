@@ -1,10 +1,12 @@
-from typing import Callable, Any
-from collections.abc import Mapping
+from typing import Callable
+from collections.abc import Mapping, MutableMapping
 
 import wx
+from pubsub import pub
+from pint.registry import Quantity
 
 from wxfrog.models.casestudy import ParameterSpec
-from wxfrog.models.scenarios import Scenario
+from wxfrog.events import CASE_STUDY_PARAMETER_SELECTED
 from .auxiliary import PopupBase
 from .quantity_control import (
     QuantityCtrl, QuantityChangedEvent, EVT_QUANTITY_CHANGED, EVT_UNIT_DEFINED)
@@ -33,7 +35,6 @@ class ParameterSelectDialog(wx.Dialog):
         self.tree.Bind(wx.EVT_TREE_ITEM_ACTIVATED, self._on_activated)
         self.chosen = None
 
-
     def _on_activated(self, event):
         item = event.GetItem()
         if self.tree.ItemHasChildren(item):
@@ -45,7 +46,6 @@ class ParameterSelectDialog(wx.Dialog):
             item = self.tree.GetItemParent(item)
         self.chosen = tuple(reversed(path))
         self.EndModal(wx.ID_OK)
-
 
 
 class NamePopup(PopupBase):
@@ -62,17 +62,26 @@ class NamePopup(PopupBase):
 
 
 class QuantityPopup(PopupBase):
-    def __init__(self, parent: wx.Window, value: str, callback, rect: wx.Rect):
+    def __init__(self, parent: wx.Window,
+                 value: Quantity, callback, rect: wx.Rect, units,
+                 min_value: Quantity = None, max_value: Quantity = None):
+        self.min_value, self.max_value = min_value, max_value
+        self.units = units
         super().__init__(parent, rect, value, callback)
         self.bind_ctrl(EVT_QUANTITY_CHANGED)
 
     def create_ctrl(self, parent, initial_value):
-        qty_cls = get_unit_registry().Quantity
         # TODO: Can I get predefined units and min/max values here?
-        return QuantityCtrl(parent, qty_cls(initial_value), [])
+        return QuantityCtrl(parent, initial_value, self.units,
+                            min_value=self.min_value, max_value=self.max_value)
 
     def collect_result(self, event: QuantityChangedEvent, ctrl):
         return event
+
+# TODO:
+#  - integer popup for positive integers
+#  - float popup for positive floats
+
 
 
 class ParameterListCtrl(wx.ListCtrl):
@@ -85,7 +94,7 @@ class ParameterListCtrl(wx.ListCtrl):
                         ["Log", 40]]
         for k, (n, w) in enumerate(self.columns):
             self.InsertColumn(k, n, width=w)
-        self._parameters : list[ParameterSpec] = []
+        self._parameters : list[MutableMapping] = []
 
         width = sum(w for _, w in self.columns)
         self.SetMinSize(wx.Size(width, 300))
@@ -105,7 +114,9 @@ class ParameterListCtrl(wx.ListCtrl):
 
         callbacks : Mapping[int, Callable[[int, wx.Rect], None]] = {
             1: self._on_edit_name,
-            2: self._on_edit_min
+            2: self._on_edit_min,
+            3: self._on_edit_max,
+            4: self._on_edit_incr
         }
 
         if subitem in callbacks:
@@ -128,13 +139,63 @@ class ParameterListCtrl(wx.ListCtrl):
 
     def _on_edit_min(self, item, rect):
         def commit(event):
-            if not event.in_bounds:
+            new_value = event.new_value
+            if not event.in_bounds or new_value == spec.min:
                 return False
-            self.SetItem(item, 2, f"{event.new_value:.6g~P}")
+            incr, num = None, None
+            if spec.num_spec:
+                num = spec.num
+            else:
+                incr = spec.incr
+            info["spec"] = ParameterSpec(
+                spec.path, event.new_value, spec.max, name = spec.name,
+                num=num, incr=incr, log=spec.log)
+            self._update(item)
             return True
 
-        min_value = self.GetItemText(item, col=2)
-        popup = QuantityPopup(self, min_value, commit, rect)
+        info = self._parameters[item]
+        spec = info["spec"]
+        popup = QuantityPopup(self, spec.min, commit, rect,
+                              info["units"], info["min"], info["max"])
+        wx.CallAfter(popup.Popup)
+
+    def _on_edit_max(self, item, rect):
+        def commit(event):
+            new_value = event.new_value
+            if not event.in_bounds or new_value == spec.max:
+                return False
+            incr, num = None, None
+            if spec.num_spec:
+                num = spec.num
+            else:
+                incr = spec.incr
+            info["spec"] = ParameterSpec(
+                spec.path, spec.min, event.new_value, name = spec.name,
+                num=num, incr=incr, log=spec.log)
+            self._update(item)
+            return True
+
+        info = self._parameters[item]
+        spec = info["spec"]
+        popup = QuantityPopup(self, spec.max, commit, rect,
+                              info["units"], info["min"], info["max"])
+        wx.CallAfter(popup.Popup)
+
+    def _on_edit_incr(self, item, rect):
+        def commit(event):
+            # if spec.log, assert > 0 and != 1
+            # else assert != 0
+            # maybe warn if number > 100 (or just render red in list)
+            pass
+
+        info = self._parameters[item]
+        spec = info["spec"]
+        if spec.log:
+            # number popup (need to make, number needs to be positive)
+            popup = ...
+        else:
+            popup = QuantityPopup(self, spec.incr, commit, rect, info["units"])
+
         wx.CallAfter(popup.Popup)
 
     def _on_size(self, event):
@@ -152,20 +213,20 @@ class ParameterListCtrl(wx.ListCtrl):
         self.SetColumnWidth(len(self.columns) - 1, new_w[-1])
         self.columns = [[n, nw] for (n, _), nw in zip(self.columns, new_w)]
 
-    def add(self, spec: ParameterSpec):
+    def add(self, param_info: MutableMapping):
         idx = self.GetItemCount()
-        name = ".".join(spec.path)
-        self.InsertItem(idx, name)
-        self._parameters.append(spec)
+        spec = param_info["spec"]
+        self.InsertItem(idx, ".".join(spec.path))
+        self._parameters.append(param_info)
         self._update(idx)
 
     def _update(self, idx):
-        spec = self._parameters[idx]
-        name = ".".join(spec.path)
-        self.SetItem(idx, 1, name)
+        spec = self._parameters[idx]["spec"]
+        self.SetItem(idx, 1, spec.name)
         self.SetItem(idx, 2, f"{spec.min:.6g~P}")
         self.SetItem(idx, 3, f"{spec.max:.6g~P}")
-        self.SetItem(idx, 4, f"{spec.incr:.6g~P}")
+        incr = f"{spec.incr:.6g}" if spec.log else f"{spec.incr:.6g~P}"
+        self.SetItem(idx, 4, incr)
         self.SetItem(idx, 5, f"{spec.num}")
         self.SetItem(idx, 6, "Yes" if spec.log else "No")
 
@@ -205,21 +266,17 @@ class CaseStudyDialog(wx.Dialog):
         sizer.Add(sizer_2, 0, wx.EXPAND, 0)
         self.SetSizerAndFit(sizer)
 
-        self._scenario = None
+        self._param_struct = None
 
     def switch_button_enable(self, name: str, enabled: bool):
         self.buttons[name].Enable(enabled)
 
-    def set_scenario(self, scenario: Scenario):
-        self._scenario = scenario
+    def set_param_struct(self, param_struct):
+        self._param_struct = param_struct
 
     def _on_add(self, event):
         # show tree dialog with parameters to select from
-        param = self._scenario.parameters
+        param = self._param_struct
         dialog = ParameterSelectDialog(self, param)
         if dialog.ShowModal() == wx.ID_OK:
-            path = dialog.chosen
-            value = param.get(path)
-            spec = ParameterSpec(path, 0.9 * value, 1.1 * value, num=10)
-            self.list_ctrl.add(spec)
-
+            pub.sendMessage(CASE_STUDY_PARAMETER_SELECTED, path=dialog.chosen)

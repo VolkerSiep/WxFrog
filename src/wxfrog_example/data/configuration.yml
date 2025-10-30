@@ -21,7 +21,7 @@ run_engine_on_start: yes
 
 results:
   - path: ["y"]
-    uom: bar
+    uom: psi
     pos: [300, 200]
     fmt: "y = {:.2f~P}"
   - path: ["z"]
@@ -36,7 +36,7 @@ parameters:
     fmt: "x = {:.2f~P}"
     min: 1.0
     max: 4.0
-    # name: Karl Heinz  # optional
+    name: Karl Heinz  # optional
 
 tables:
   - name: Stream table

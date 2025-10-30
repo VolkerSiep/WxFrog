@@ -7,6 +7,7 @@ import wx
 
 from .models.engine import CalculationEngine
 from .models.model import Model
+from .models.casestudy import ParameterSpec
 from .views.frame import FrogFrame
 from .config import Configuration
 from .events import *
@@ -35,7 +36,9 @@ class Controller:
                   DELETE_SCENARIO: self._on_delete_scenario,
                   OPEN_RESULTS: self._on_open_results,
                   RESULT_UNIT_CLICKED: self._on_result_unit_clicked,
-                  RESULT_UNIT_CHANGED: self._update_results}
+                  RESULT_UNIT_CHANGED: self._update_results,
+                  CASE_STUDY_PARAMETER_SELECTED: self._on_case_study_param_sel,
+                  }
 
         for evt_id, callback in events.items():
             pub.subscribe(callback, evt_id)
@@ -131,9 +134,8 @@ class Controller:
         event.Skip()
 
     def _on_run_case_study(self):
-        scn = self.model.scenarios[SCENARIO_CURRENT]
-        self.frame.case_studies.set_scenario(scn)
-        self.frame.show_case_studies(scn)
+        parameters = self.model.scenarios[SCENARIO_CURRENT].parameters
+        self.frame.show_case_studies(parameters)
 
     def _on_show_parameter(self, item):
         scn_current = self.model.scenarios[SCENARIO_CURRENT]
@@ -170,6 +172,11 @@ class Controller:
     def _on_result_unit_clicked(self, item, value):
         units = self.model.compatible_units(value)
         self.frame.results.view_ctrl.change_unit(item, units)
+
+    def _on_case_study_param_sel(self, path):
+        param_info = self.model.get_param_info(path)
+        print(param_info)
+        self.frame.case_studies.list_ctrl.add(param_info)
 
     # non-event standard workflows, triggered by events
 

@@ -11,26 +11,24 @@ class PopupBase(wx.PopupTransientWindow):
     """
     def __init__(self, parent: wx.Window, rect: wx.Rect,
                  initial_value, client_callback: Callable[[Any], bool]):
-        super().__init__(parent, flags=wx.BORDER_SIMPLE)
-        panel = wx.Panel(self)
+        super().__init__(parent, flags=wx.BORDER_SIMPLE | wx.FRAME_SHAPED | wx.WANTS_CHARS)
+        # panel = wx.Panel(self)
         self._client_callback = client_callback
 
-        self._ctrl = self.create_ctrl(panel, initial_value)
+        self._ctrl = self.create_ctrl(self, initial_value)
         min_size = self._ctrl.GetMinSize()
         size = rect.GetSize() + wx.Size(2, 2)
         min_size = wx.Size(max(min_size.GetWidth(), size.GetWidth()),
                            max(min_size.GetHeight(), size.GetHeight()))
         self._ctrl.SetMinSize(min_size)
         ds = min_size - size
-        print(ds)
         offset = wx.Point(4 + ds.GetWidth() // 2, 4 + ds.GetHeight() // 2)
         pos = parent.ClientToScreen(rect.GetPosition()) - offset
         self.SetPosition(pos)
         sizer = wx.BoxSizer(wx.VERTICAL)
 
         sizer.Add(self._ctrl, 1, wx.EXPAND | wx.ALL, 2)
-        panel.SetSizerAndFit(sizer)
-        self.SetClientSize(panel.GetSize())
+        self.SetSizerAndFit(sizer)
 
         self.Bind(wx.EVT_KILL_FOCUS, lambda e: self.Dismiss())
 

@@ -9,12 +9,13 @@ from pubsub import pub
 
 from wxfrog.utils import (
     fmt_unit, ThreadedStringIO, get_unit_registry, DataStructure)
-from .engine import CalculationEngine, CalculationFailed
 from wxfrog.config import (
     Configuration, ConfigurationError, ParameterNotFound, UnitSyntaxError,
     UndefinedUnit, UnitConversionError, OutOfBounds)
-
-from wxfrog.events import (INITIALIZATION_DONE, CALCULATION_DONE, CALCULATION_FAILED)
+from wxfrog.events import (
+    INITIALIZATION_DONE, CALCULATION_DONE, CALCULATION_FAILED)
+from .engine import CalculationEngine, CalculationFailed
+from .casestudy import ParameterSpec
 from .scenarios import (Scenario, SCENARIO_DEFAULT, SCENARIO_CURRENT,
                         SCENARIO_CONVERGED)
 
@@ -41,10 +42,12 @@ class Model:
         snc = self._scenarios
         snc[SCENARIO_DEFAULT] = Scenario(default_params)
         snc[SCENARIO_CURRENT] = deepcopy(snc[SCENARIO_DEFAULT])
-        errors = self._initialize_parameters(default_params)
-        U = get_unit_registry().Unit
-        self._all_units = {fmt_unit(U(u))
+        u_cls = get_unit_registry().Unit
+        self._all_units = {fmt_unit(u_cls(u))
                            for u in self._configuration["units"]}
+        errors = self._initialize_parameters(default_params)
+        for r in self._configuration["results"]:
+            self._all_units.add(fmt_unit(u_cls(r["uom"])))
         return errors
 
     @property
@@ -79,6 +82,29 @@ class Model:
         unit_cls = get_unit_registry().Unit
         self._all_units.add(fmt_unit(unit_cls(unit)))
 
+    def get_param_info(self, path):
+        qty_cls = get_unit_registry().Quantity
+        params = self.scenarios[SCENARIO_CURRENT].parameters
+        min_, max_ = None, None
+        name, uom = ".".join(path), ""
+        for p in self._configuration["parameters"]:
+            if tuple(p["path"]) == path:
+                min_, max_ = p.get("min", None), p.get("max", None)
+                name, uom = p.get("name", name), p["uom"]
+                break
+        value = params.get(path)
+        min_bound, max_bound = 0.9 * value, 1.1 * value
+        if min_ is not None:
+            min_ = qty_cls(min_, uom)
+            min_bound = max(min_, min_bound)
+        if max_ is not None:
+            max_ = qty_cls(max_, uom)
+            max_bound = min(max_, max_bound)
+
+        spec = ParameterSpec(path, min_bound, max_bound, name=name, num=5)
+        units = self.compatible_units(value)
+        return { "spec": spec, "min": min_, "max": max_, "units": units}
+
     def _initialize_parameters(self, param: DataStructure
                                ) -> Collection[ConfigurationError]:
         errors = []
@@ -102,12 +128,12 @@ class Model:
                 errors.append(UnitConversionError(path, fmt_unit(v.u),
                                                   item["uom"]))
                 continue
-            v = param.get(path)
             i_min, i_max = item["min"], item["max"]
             if i_max is not None and v > (v_max := qty_cls(i_max, v.u)):
                 errors.append(OutOfBounds(path, v, v_max, True))
             elif i_min is not None and v < (v_min := qty_cls(i_min, v.u)):
                 errors.append(OutOfBounds(path, v, v_min, False))
+            self._all_units.add(fmt_unit(v.u))
         return errors
 
     def serialize(self):

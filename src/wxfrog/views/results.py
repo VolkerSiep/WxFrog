@@ -1,4 +1,6 @@
 from collections.abc import Mapping
+from typing import Any
+
 import wx
 from wx.dataview import (
     PyDataViewModel, DataViewItem, NullDataViewItem, DataViewCtrl,
@@ -10,6 +12,7 @@ from pint.registry import Quantity
 
 from ..utils import fmt_unit, PathFilter, DataStructure
 from ..events import RESULT_UNIT_CLICKED, NEW_UNIT_DEFINED, RESULT_UNIT_CHANGED
+from .auxiliary import PopupBase
 
 
 class ResultViewModel(PyDataViewModel):
@@ -97,29 +100,20 @@ class ResultViewModel(PyDataViewModel):
         self.Cleared()
 
 
-class UnitPopup(wx.PopupTransientWindow):
+class UnitPopup(PopupBase):
     def __init__(self, parent: wx.Window, active_unit: str,
-                 units: list[str], callback, size: wx.Size):
-        super().__init__(parent, flags=wx.BORDER_SIMPLE)
-        pnl = wx.Panel(self)
-        sizer = wx.BoxSizer(wx.VERTICAL)
+                 units: list[str], callback, rect):
+        self._units = units
+        super().__init__(parent, rect, active_unit, callback)
+        self.bind_ctrl(wx.EVT_COMBOBOX)
+        self.bind_ctrl(wx.EVT_TEXT_ENTER)
 
+    def create_ctrl(self, parent, initial_value):
         style = wx.CB_DROPDOWN | wx.CB_SORT | wx.TE_PROCESS_ENTER
-        combo = wx.ComboBox(pnl, value=active_unit, choices=units, style=style)
-        combo.SetMinSize(size + wx.Size(4, 4))
-        combo.Bind(wx.EVT_COMBOBOX, self.callback)
-        combo.Bind(wx.EVT_TEXT_ENTER, self.callback)
-
-        sizer.Add(combo, 1, wx.EXPAND | wx.ALL, 2)
-        pnl.SetSizerAndFit(sizer)
-        self.SetClientSize(pnl.GetSize())
-
-        self.Bind(wx.EVT_KILL_FOCUS, lambda e: self.Dismiss())
-        self._callback = callback
-
-    def callback(self, event):
-        self._callback(event.GetString())
-        self.Dismiss()
+        return wx.ComboBox(parent, value=initial_value,
+                           choices=self._units, style=style)
+    def collect_result(self, event: wx.CommandEvent, ctrl):
+        return event.GetString()
 
 
 class ResultDataViewCtrl(DataViewCtrl):
@@ -264,11 +258,7 @@ class ResultDataViewCtrl(DataViewCtrl):
 
         # position and size
         rect = self.GetItemRect(item, col)
-        pos = self.ClientToScreen(rect.GetPosition()) - wx.Point(4, 4)
-
-        popup = UnitPopup(self, active_unit, units, commit, rect.GetSize())
-        popup.SetPosition(pos)
-        popup.SetMinSize(rect.Size)
+        popup = UnitPopup(self, active_unit, units, commit, rect)
         wx.CallAfter(popup.Popup)
 
     def set_data(self, data: DataStructure):

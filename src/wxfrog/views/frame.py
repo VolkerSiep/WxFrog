@@ -129,6 +129,6 @@ class FrogFrame(wx.Frame):
         dialog.ShowModal()
         self.Close()
 
-    def show_case_studies(self, scenario):
-        self.case_studies.set_scenario = scenario
+    def show_case_studies(self, parameters):
+        self.case_studies.set_param_struct(parameters)
         self.case_studies.Show()
