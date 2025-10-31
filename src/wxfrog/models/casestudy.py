@@ -23,7 +23,7 @@ class ParameterSpec:
     max: Quantity
     _: KW_ONLY
     name: str = None
-    incr: Quantity = None
+    incr: Quantity|float = None
     num: int = None
     log: bool = False
     data: Sequence[Quantity] = field(init=False, repr=False, compare=False)
@@ -61,7 +61,7 @@ class ParameterSpec:
         if self.num_spec:
             if num is None:
                 num = 11
-            incr = ratio ** (1 / (num - 1)) if num > 1 else 1
+            incr = float(ratio ** (1 / (num - 1))) if num > 1 else 1
         else:
             assert num is None, "Only either num or incr can be specified"
         if (incr - 1) * (ratio - 1) < 0:

@@ -10,7 +10,8 @@ from wxfrog.events import CASE_STUDY_PARAMETER_SELECTED
 from .auxiliary import PopupBase
 from .quantity_control import (
     QuantityCtrl, QuantityChangedEvent, EVT_QUANTITY_CHANGED, EVT_UNIT_DEFINED)
-from ..utils import DataStructure, get_unit_registry
+from .number_ctrl import LogIncrementCtrl, NumberStepsCtrl
+from ..utils import DataStructure
 
 
 class ParameterSelectDialog(wx.Dialog):
@@ -71,17 +72,38 @@ class QuantityPopup(PopupBase):
         self.bind_ctrl(EVT_QUANTITY_CHANGED)
 
     def create_ctrl(self, parent, initial_value):
-        # TODO: Can I get predefined units and min/max values here?
         return QuantityCtrl(parent, initial_value, self.units,
                             min_value=self.min_value, max_value=self.max_value)
 
     def collect_result(self, event: QuantityChangedEvent, ctrl):
         return event
 
-# TODO:
-#  - integer popup for positive integers
-#  - float popup for positive floats
 
+class NumberPopup(PopupBase):
+    def __init__(self, parent: wx.Window, value: int, callback, rect: wx.Rect):
+        super().__init__(parent, rect, value, callback)
+        self.bind_ctrl(wx.EVT_TEXT_ENTER)
+        self.bind_ctrl(wx.EVT_KILL_FOCUS)
+
+    def create_ctrl(self, parent, initial_value):
+        return NumberStepsCtrl(parent, initial_value)
+
+    def collect_result(self, event: QuantityChangedEvent, ctrl):
+        return int(event.GetString())
+
+
+class FactorPopup(PopupBase):
+    def __init__(self, parent: wx.Window, value: float,
+                 callback, rect: wx.Rect):
+        super().__init__(parent, rect, value, callback)
+        self.bind_ctrl(wx.EVT_TEXT_ENTER)
+        self.bind_ctrl(wx.EVT_KILL_FOCUS)
+
+    def create_ctrl(self, parent, initial_value):
+        return LogIncrementCtrl(parent, initial_value)
+
+    def collect_result(self, event: QuantityChangedEvent, ctrl):
+        return float(event.GetString())
 
 
 class ParameterListCtrl(wx.ListCtrl):
@@ -106,7 +128,6 @@ class ParameterListCtrl(wx.ListCtrl):
     def _on_item_activated(self, event):
         pos = event.GetPosition()
         item, flags, subitem = self.HitTestSubItem(pos)
-        print(f"Row={item}, Column={subitem}")
         if item == wx.NOT_FOUND or subitem == wx.NOT_FOUND:
             return
         rect = wx.Rect()
@@ -116,17 +137,12 @@ class ParameterListCtrl(wx.ListCtrl):
             1: self._on_edit_name,
             2: self._on_edit_min,
             3: self._on_edit_max,
-            4: self._on_edit_incr
+            4: self._on_edit_incr,
+            5: self._on_edit_number,
+            6: self._on_toggle_log
         }
-
         if subitem in callbacks:
             callbacks[subitem](item, rect)
-
-        # subitem branching
-        # 1: Edit name
-        # 2 - 4: Edit min, max, increment
-        # 5: Edit number
-        # 6: Toggle log
 
     def _on_edit_name(self, item, rect):
         def commit(value):
@@ -182,21 +198,52 @@ class ParameterListCtrl(wx.ListCtrl):
         wx.CallAfter(popup.Popup)
 
     def _on_edit_incr(self, item, rect):
-        def commit(event):
-            # if spec.log, assert > 0 and != 1
-            # else assert != 0
-            # maybe warn if number > 100 (or just render red in list)
-            pass
+        def commit_incr(event):
+            incr = event.new_value
+            info["spec"] = ParameterSpec(
+                spec.path, spec.min, spec.max, name=spec.name,
+                incr=incr, log=spec.log)
+            self._update(item)
+            return True
+
+        def commit_factor(factor):
+            info["spec"] = ParameterSpec(
+                spec.path, spec.min, spec.max, name=spec.name,
+                incr=factor, log=spec.log)
+            self._update(item)
+            return True
 
         info = self._parameters[item]
         spec = info["spec"]
         if spec.log:
             # number popup (need to make, number needs to be positive)
-            popup = ...
+            popup = FactorPopup(self, spec.incr, commit_factor, rect)
         else:
-            popup = QuantityPopup(self, spec.incr, commit, rect, info["units"])
+            popup = QuantityPopup(self, spec.incr, commit_incr,
+                                  rect, info["units"])
 
         wx.CallAfter(popup.Popup)
+
+    def _on_edit_number(self, item, rect):
+        def commit(number: int):
+            info["spec"] = ParameterSpec(
+                spec.path, spec.min, spec.max, name = spec.name,
+                num=number, log=spec.log)
+            self._update(item)
+            return True
+
+        info = self._parameters[item]
+        spec = info["spec"]
+        popup = NumberPopup(self, spec.num, commit, rect)
+        wx.CallAfter(popup.Popup)
+
+    def _on_toggle_log(self, item, rect):
+        info = self._parameters[item]
+        spec = info["spec"]
+        info["spec"] = ParameterSpec(
+            spec.path, spec.min, spec.max, name=spec.name,
+            num=spec.num, log=not spec.log)
+        self._update(item)
 
     def _on_size(self, event):
         size = event.GetSize()

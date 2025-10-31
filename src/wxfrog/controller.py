@@ -175,7 +175,6 @@ class Controller:
 
     def _on_case_study_param_sel(self, path):
         param_info = self.model.get_param_info(path)
-        print(param_info)
         self.frame.case_studies.list_ctrl.add(param_info)
 
     # non-event standard workflows, triggered by events
