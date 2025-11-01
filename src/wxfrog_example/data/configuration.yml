@@ -33,10 +33,16 @@ parameters:
   - path: ["a", "b", "x"]
     pos: [300, 270]
     uom: m^3/h
-    fmt: "x = {:.2f~P}"
+    fmt: "Q = {:.2f~P}"
     min: 1.0
     max: 4.0
     name: Karl Heinz  # optional
+  - path: ["c"]
+    pos: [300, 300]
+    uom: bar
+    fmt: "p = {:.2f~P}"
+    min: 1.0
+    max: 100.0
 
 tables:
   - name: Stream table

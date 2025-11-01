@@ -26,7 +26,8 @@ class MyModel(CalculationEngine):
         self.outstream = out_stream
 
     def get_default_parameters(self):
-        return {"a": {"b": {"x": Q(3, "m**3/h")}}}
+        return {"a": {"b": {"x": Q(3, "m**3/h")}},
+                "c": Q(4, "bar")}
 
     def calculate(self, parameters: dict) -> dict:
         x = parameters["a"]["b"]["x"]

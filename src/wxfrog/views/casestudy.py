@@ -6,7 +6,7 @@ from pubsub import pub
 from pint.registry import Quantity
 
 from wxfrog.models.casestudy import ParameterSpec
-from wxfrog.events import CASE_STUDY_PARAMETER_SELECTED
+from wxfrog.events import CASE_STUDY_PARAMETER_SELECTED, CASE_STUDY_LIST_CHANGED
 from .auxiliary import PopupBase
 from .quantity_control import (
     QuantityCtrl, QuantityChangedEvent, EVT_QUANTITY_CHANGED, EVT_UNIT_DEFINED)
@@ -116,13 +116,18 @@ class ParameterListCtrl(wx.ListCtrl):
                         ["Log", 40]]
         for k, (n, w) in enumerate(self.columns):
             self.InsertColumn(k, n, width=w)
-        self._parameters : list[MutableMapping] = []
+        self.parameters : list[MutableMapping] = []
 
         width = sum(w for _, w in self.columns)
         self.SetMinSize(wx.Size(width, 300))
         self.Bind(wx.EVT_SIZE, self._on_size)
         self.Bind(wx.EVT_LIST_COL_END_DRAG, self._on_column_resized)
         self.Bind(wx.EVT_LEFT_DCLICK, self._on_item_activated)
+
+        cb = lambda e: pub.sendMessage(CASE_STUDY_LIST_CHANGED)
+        for evt in (wx.EVT_LIST_ITEM_SELECTED, wx.EVT_LIST_DELETE_ITEM,
+                    wx.EVT_LIST_INSERT_ITEM, wx.EVT_LIST_ITEM_DESELECTED):
+            self.Bind(evt, cb)
 
 
     def _on_item_activated(self, event):
@@ -166,10 +171,10 @@ class ParameterListCtrl(wx.ListCtrl):
             info["spec"] = ParameterSpec(
                 spec.path, event.new_value, spec.max, name = spec.name,
                 num=num, incr=incr, log=spec.log)
-            self._update(item)
+            self.update(item)
             return True
 
-        info = self._parameters[item]
+        info = self.parameters[item]
         spec = info["spec"]
         popup = QuantityPopup(self, spec.min, commit, rect,
                               info["units"], info["min"], info["max"])
@@ -188,10 +193,10 @@ class ParameterListCtrl(wx.ListCtrl):
             info["spec"] = ParameterSpec(
                 spec.path, spec.min, event.new_value, name = spec.name,
                 num=num, incr=incr, log=spec.log)
-            self._update(item)
+            self.update(item)
             return True
 
-        info = self._parameters[item]
+        info = self.parameters[item]
         spec = info["spec"]
         popup = QuantityPopup(self, spec.max, commit, rect,
                               info["units"], info["min"], info["max"])
@@ -203,17 +208,17 @@ class ParameterListCtrl(wx.ListCtrl):
             info["spec"] = ParameterSpec(
                 spec.path, spec.min, spec.max, name=spec.name,
                 incr=incr, log=spec.log)
-            self._update(item)
+            self.update(item)
             return True
 
         def commit_factor(factor):
             info["spec"] = ParameterSpec(
                 spec.path, spec.min, spec.max, name=spec.name,
                 incr=factor, log=spec.log)
-            self._update(item)
+            self.update(item)
             return True
 
-        info = self._parameters[item]
+        info = self.parameters[item]
         spec = info["spec"]
         if spec.log:
             # number popup (need to make, number needs to be positive)
@@ -229,21 +234,21 @@ class ParameterListCtrl(wx.ListCtrl):
             info["spec"] = ParameterSpec(
                 spec.path, spec.min, spec.max, name = spec.name,
                 num=number, log=spec.log)
-            self._update(item)
+            self.update(item)
             return True
 
-        info = self._parameters[item]
+        info = self.parameters[item]
         spec = info["spec"]
         popup = NumberPopup(self, spec.num, commit, rect)
         wx.CallAfter(popup.Popup)
 
     def _on_toggle_log(self, item, rect):
-        info = self._parameters[item]
+        info = self.parameters[item]
         spec = info["spec"]
         info["spec"] = ParameterSpec(
             spec.path, spec.min, spec.max, name=spec.name,
             num=spec.num, log=not spec.log)
-        self._update(item)
+        self.update(item)
 
     def _on_size(self, event):
         size = event.GetSize()
@@ -264,11 +269,12 @@ class ParameterListCtrl(wx.ListCtrl):
         idx = self.GetItemCount()
         spec = param_info["spec"]
         self.InsertItem(idx, ".".join(spec.path))
-        self._parameters.append(param_info)
-        self._update(idx)
+        self.parameters.append(param_info)
+        self.update(idx)
 
-    def _update(self, idx):
-        spec = self._parameters[idx]["spec"]
+    def update(self, idx):
+        spec = self.parameters[idx]["spec"]
+        self.SetItem(idx, 0, ".".join(spec.path))
         self.SetItem(idx, 1, spec.name)
         self.SetItem(idx, 2, f"{spec.min:.6g~P}")
         self.SetItem(idx, 3, f"{spec.max:.6g~P}")
@@ -290,9 +296,9 @@ class CaseStudyDialog(wx.Dialog):
         sizer_2 = wx.BoxSizer(wx.HORIZONTAL)
 
         btn_data = [("add", wx.ART_PLUS, False, self._on_add),
-                    ("up", wx.ART_GO_UP, False, lambda x: None),
-                    ("down", wx.ART_GO_DOWN, False, lambda x: None),
-                    ("del", wx.ART_CROSS_MARK, False, lambda x: None),
+                    ("up", wx.ART_GO_UP, False, self._on_up),
+                    ("down", wx.ART_GO_DOWN, False, self._on_down),
+                    ("del", wx.ART_CROSS_MARK, False, self._on_delete),
                     ("copy", wx.ART_COPY, False, lambda x: None)]
         self.buttons = {}
         for name, icon, enabled, call_back in btn_data:
@@ -312,6 +318,7 @@ class CaseStudyDialog(wx.Dialog):
             sizer_2.Add(self.buttons[name], 0, wx.EXPAND | wx.ALL, 3)
         sizer.Add(sizer_2, 0, wx.EXPAND, 0)
         self.SetSizerAndFit(sizer)
+        pub.subscribe(self._on_list_changed, CASE_STUDY_LIST_CHANGED)
 
         self._param_struct = None
 
@@ -327,3 +334,46 @@ class CaseStudyDialog(wx.Dialog):
         dialog = ParameterSelectDialog(self, param)
         if dialog.ShowModal() == wx.ID_OK:
             pub.sendMessage(CASE_STUDY_PARAMETER_SELECTED, path=dialog.chosen)
+
+    def _on_delete(self, event):
+        lc = self.list_ctrl
+        item = lc.GetFirstSelected()
+        lc.DeleteItem(item)
+        del lc.parameters[item]
+
+    def _on_up(self, event):
+        lc = self.list_ctrl
+        item = lc.GetFirstSelected()
+        lc.parameters[item], lc.parameters[item - 1] = \
+            lc.parameters[item - 1], lc.parameters[item]
+        lc.update(item)
+        lc.update(item - 1)
+        lc.SetItemState(item - 1,
+                        wx.LIST_STATE_SELECTED, wx.LIST_STATE_SELECTED)
+
+    def _on_down(self, event):
+        lc = self.list_ctrl
+        item = lc.GetFirstSelected()
+        lc.parameters[item], lc.parameters[item + 1] = \
+            lc.parameters[item + 1], lc.parameters[item]
+        lc.update(item)
+        lc.update(item + 1)
+        lc.SetItemState(item + 1,
+                        wx.LIST_STATE_SELECTED, wx.LIST_STATE_SELECTED)
+
+    def _on_list_changed(self):
+        item = self.list_ctrl.GetFirstSelected()
+        count = self.list_ctrl.GetItemCount()
+        if item == -1:
+            for name in "up down del".split():
+                self.buttons[name].Enable(False)
+        else:
+            self.buttons["del"].Enable(True)
+            self.buttons["up"].Enable(item > 0)
+            self.buttons["down"].Enable(item < count - 1)
+
+# TODO:
+#  - showing total number of points to be calculated
+#  - recognizing new UOMs (like in result view)
+#  - running the sensitivity study
+#  - copying results
