@@ -7,7 +7,7 @@ import wx
 
 from .models.engine import CalculationEngine
 from .models.model import Model
-from .models.casestudy import ParameterSpec
+from .models.casestudy import CaseStudy
 from .views.frame import FrogFrame
 from .config import Configuration
 from .events import *
@@ -26,7 +26,8 @@ class Controller:
                   INITIALIZATION_DONE: self._on_initialisation_done,
                   CALCULATION_DONE: self._on_calculation_done,
                   OPEN_SCENARIOS: self._on_open_scenarios,
-                  OPEN_FILE: self._on_open_file, SAFE_FILE: self._on_save_file,
+                  OPEN_FILE: self._on_open_file,
+                  SAFE_FILE: self._on_save_file,
                   SAFE_FILE_AS: self._on_save_file_as,
                   EXIT_APP: self._on_exit_app,
                   RUN_CASE_STUDY: self._on_run_case_study,
@@ -38,6 +39,7 @@ class Controller:
                   RESULT_UNIT_CLICKED: self._on_result_unit_clicked,
                   RESULT_UNIT_CHANGED: self._update_results,
                   CASE_STUDY_PARAMETER_SELECTED: self._on_case_study_param_sel,
+                  CASE_STUDY_RUN: self._on_case_study_run
                   }
 
         for evt_id, callback in events.items():
@@ -47,6 +49,12 @@ class Controller:
         self.frame = FrogFrame(self.configuration, self.model.out_stream)
         self.model.initialise_engine()
         self.frame.Show()
+
+    def _on_case_study_run(self, specs):
+        case_study = self.model.define_case_study()
+        case_study.set_parameters(specs)
+        print("Hello")
+        case_study.run()
 
     def _on_export_canvas_gfx(self):
         msg = "Save canvas as graphics"
@@ -58,6 +66,7 @@ class Controller:
         self.model.run_engine()
         self.frame.run_menu_item.Enable(False)
         self.frame.case_study_menu_item.Enable(False)
+        self.frame.case_studies.allow_run(False)
 
     def _on_calculation_done(self):
         # if parameters of converged are still the same as current, copy them.
@@ -68,11 +77,13 @@ class Controller:
         self._update_scenarios()
         self.frame.run_menu_item.Enable()
         self.frame.case_study_menu_item.Enable()
+        self.frame.case_studies.allow_run(True)
 
     def _on_calculation_failed(self, message):
         self.frame.show_calculation_error(message)
         self.frame.run_menu_item.Enable()
         self.frame.case_study_menu_item.Enable()
+        self.frame.case_studies.allow_run(True)
 
     def _on_initialisation_done(self):
         errors = self.model.finalize_initialisation()
@@ -80,6 +91,7 @@ class Controller:
             wx.CallAfter(self.frame.show_config_error_dialog, errors)
         wx.CallAfter(self._update_parameters)
         self.frame.case_studies.switch_button_enable("add", True)
+        self.frame.case_studies.allow_run(True)
         if self.configuration["run_engine_on_start"]:
             self._on_model_run()
 

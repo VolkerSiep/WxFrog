@@ -15,7 +15,7 @@ from wxfrog.config import (
 from wxfrog.events import (
     INITIALIZATION_DONE, CALCULATION_DONE, CALCULATION_FAILED)
 from .engine import CalculationEngine, CalculationFailed
-from .casestudy import ParameterSpec
+from .casestudy import CaseStudy, ParameterSpec
 from .scenarios import (Scenario, SCENARIO_DEFAULT, SCENARIO_CURRENT,
                         SCENARIO_CONVERGED)
 
@@ -27,7 +27,7 @@ class Model:
         self._out_stream = ThreadedStringIO()
         self._all_units = set()
         self._scenarios = {}
-        self._case_studies = {}
+        self._case_study = None
         self.file_path = None
 
     def initialise_engine(self):
@@ -135,6 +135,11 @@ class Model:
                 errors.append(OutOfBounds(path, v, v_min, False))
             self._all_units.add(fmt_unit(v.u))
         return errors
+
+    def define_case_study(self):
+        scn = self._scenarios[SCENARIO_CONVERGED]
+        self._case_study = CaseStudy(self._engine, scn, self._out_stream)
+        return self._case_study
 
     def serialize(self):
         return {

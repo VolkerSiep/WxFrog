@@ -6,7 +6,9 @@ from pubsub import pub
 from pint.registry import Quantity
 
 from wxfrog.models.casestudy import ParameterSpec
-from wxfrog.events import CASE_STUDY_PARAMETER_SELECTED, CASE_STUDY_LIST_CHANGED
+from wxfrog.events import (
+    CASE_STUDY_PARAMETER_SELECTED, CASE_STUDY_LIST_CHANGED,
+    CASE_STUDY_NUMBER_CHANGED, NEW_UNIT_DEFINED, CASE_STUDY_RUN)
 from .auxiliary import PopupBase
 from .quantity_control import (
     QuantityCtrl, QuantityChangedEvent, EVT_QUANTITY_CHANGED, EVT_UNIT_DEFINED)
@@ -72,8 +74,13 @@ class QuantityPopup(PopupBase):
         self.bind_ctrl(EVT_QUANTITY_CHANGED)
 
     def create_ctrl(self, parent, initial_value):
-        return QuantityCtrl(parent, initial_value, self.units,
+        def new_unit_defined(event):
+            pub.sendMessage(NEW_UNIT_DEFINED, unit=event.new_unit)
+
+        ctrl = QuantityCtrl(parent, initial_value, self.units,
                             min_value=self.min_value, max_value=self.max_value)
+        ctrl.Bind(EVT_UNIT_DEFINED, new_unit_defined)
+        return ctrl
 
     def collect_result(self, event: QuantityChangedEvent, ctrl):
         return event
@@ -283,8 +290,20 @@ class ParameterListCtrl(wx.ListCtrl):
         self.SetItem(idx, 5, f"{spec.num}")
         self.SetItem(idx, 6, "Yes" if spec.log else "No")
 
+        pub.sendMessage(CASE_STUDY_NUMBER_CHANGED, number=self.total_number)
+
+    @property
+    def total_number(self):
+        if not self.parameters:
+            return -1
+        total_number = 1
+        for info in self.parameters:
+            total_number *= info["spec"].num
+        return total_number
+
 
 class CaseStudyDialog(wx.Dialog):
+    _TOTAL_NUMBER_MSG = "Total number of cases to run: "
     def __init__(self, parent: wx.Window):
         style = wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER
         super().__init__(parent, title="Case study", style=style)
@@ -309,11 +328,17 @@ class CaseStudyDialog(wx.Dialog):
             self.buttons[name] = btn
 
         (run_btn := wx.Button(self, label="Run")).Enable(False)
+        run_btn.Bind(wx.EVT_BUTTON, self._on_run)
         self.buttons["run"] = run_btn
 
         for name in "add up down del".split():
             sizer_2.Add(self.buttons[name], 0, wx.EXPAND | wx.ALL, 3)
-        sizer_2.AddStretchSpacer(1)
+        label = f"{self._TOTAL_NUMBER_MSG } -"
+        self.total_number_label = wx.StaticText(self, label=label)
+        pub.subscribe(self._on_total_number_changed, CASE_STUDY_NUMBER_CHANGED)
+        sizer_2.Add(self.total_number_label, 1,
+                    wx.ALL | wx.ALIGN_CENTER_VERTICAL, 3)
+        # sizer_2.AddStretchSpacer(1)
         for name in "copy run".split():
             sizer_2.Add(self.buttons[name], 0, wx.EXPAND | wx.ALL, 3)
         sizer.Add(sizer_2, 0, wx.EXPAND, 0)
@@ -321,6 +346,7 @@ class CaseStudyDialog(wx.Dialog):
         pub.subscribe(self._on_list_changed, CASE_STUDY_LIST_CHANGED)
 
         self._param_struct = None
+        self._allow_run = False
 
     def switch_button_enable(self, name: str, enabled: bool):
         self.buttons[name].Enable(enabled)
@@ -328,12 +354,36 @@ class CaseStudyDialog(wx.Dialog):
     def set_param_struct(self, param_struct):
         self._param_struct = param_struct
 
+    def _select(self, item):
+        self.list_ctrl.SetItemState(
+            item - 1, wx.LIST_STATE_SELECTED, wx.LIST_STATE_SELECTED)
+
+    def _on_run(self, event):
+        specs = [p["spec"] for p in self.list_ctrl.parameters]
+        pub.sendMessage(CASE_STUDY_RUN, specs=specs)
+
+    def _on_total_number_changed(self, number):
+        num_fmt = "-" if number < 0 else str(number)
+        msg = f"{self._TOTAL_NUMBER_MSG}{num_fmt}"
+        self.total_number_label.SetLabel(msg)
+
     def _on_add(self, event):
         # show tree dialog with parameters to select from
         param = self._param_struct
         dialog = ParameterSelectDialog(self, param)
-        if dialog.ShowModal() == wx.ID_OK:
-            pub.sendMessage(CASE_STUDY_PARAMETER_SELECTED, path=dialog.chosen)
+        if dialog.ShowModal() != wx.ID_OK:
+            return
+        path = dialog.chosen
+        for info in self.list_ctrl.parameters:
+            spec = info["spec"]
+            if spec.path == path:
+                id_ = ".".join(path)
+                wx.MessageDialog(
+                    self, f"Parameter '{spec.name}' ({id_}) already selected",
+                    "Parameter selection error", style=wx.ICON_ERROR | wx.OK
+                ).ShowModal()
+                return
+        pub.sendMessage(CASE_STUDY_PARAMETER_SELECTED, path=path)
 
     def _on_delete(self, event):
         lc = self.list_ctrl
@@ -348,8 +398,7 @@ class CaseStudyDialog(wx.Dialog):
             lc.parameters[item - 1], lc.parameters[item]
         lc.update(item)
         lc.update(item - 1)
-        lc.SetItemState(item - 1,
-                        wx.LIST_STATE_SELECTED, wx.LIST_STATE_SELECTED)
+        self._select(item - 1)
 
     def _on_down(self, event):
         lc = self.list_ctrl
@@ -358,8 +407,7 @@ class CaseStudyDialog(wx.Dialog):
             lc.parameters[item + 1], lc.parameters[item]
         lc.update(item)
         lc.update(item + 1)
-        lc.SetItemState(item + 1,
-                        wx.LIST_STATE_SELECTED, wx.LIST_STATE_SELECTED)
+        self._select(item + 1)
 
     def _on_list_changed(self):
         item = self.list_ctrl.GetFirstSelected()
@@ -371,9 +419,21 @@ class CaseStudyDialog(wx.Dialog):
             self.buttons["del"].Enable(True)
             self.buttons["up"].Enable(item > 0)
             self.buttons["down"].Enable(item < count - 1)
+        self._update_run_button_status()
+
+    def _update_run_button_status(self):
+        param_defined = (self.list_ctrl.GetItemCount() > 0)
+        self.switch_button_enable("run", self._allow_run and param_defined)
+
+    def allow_run(self, enable: bool):
+        self._allow_run = enable
+        self._update_run_button_status()
 
 # TODO:
-#  - showing total number of points to be calculated
-#  - recognizing new UOMs (like in result view)
+#  - enable run button iff there is at least one parameter, and the controller
+#    allows it
 #  - running the sensitivity study
+#    Store the results in a DataStructure with vectorial quantities, also
+#    keeping the ravelled list of parameter values.
 #  - copying results
+#    after filtering

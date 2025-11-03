@@ -86,47 +86,33 @@ class CaseStudyResults:
 
 
 class CaseStudy:
-    def __init__(self, engine: CalculationEngine, scenario: Scenario):
+    def __init__(self, engine: CalculationEngine, scenario: Scenario,
+                 out_stream):
         self.param_specs: list[ParameterSpec] = []
         self.results: Sequence[DataStructure] = []
         self.engine = engine
+        self.outstream = out_stream
         self.lock = Lock()
         self.on_fail_continue: bool = True
         self.scenario = scenario
         self._interrupt = False
 
-    def add_parameter(self, spec: ParameterSpec):
-        self.param_specs.append(spec)
+    def set_parameters(self, specs: Sequence[ParameterSpec]):
+        self.param_specs = specs
         self.results = []
-
-    def remove_parameter(self, path: Path):
-        for k, spec in enumerate(self.param_specs):
-            if spec.path == path:
-                del self.param_specs[k]
-                return
-        param = ".".join(path)
-        raise KeyError(f"Parameter '{param}' not found in case study")
-
-    def swap_parameters(self, idx_a, idx_b):
-        ps = self.param_specs
-        ps[idx_a], ps[idx_b] = ps[idx_b], ps[idx_a]
-
-    @property
-    def num_cases(self) -> int:
-        result = 1
-        for spec in self.param_specs:
-            result *= len(spec.data)
-        return result
 
     def run(self):
         # make it possible to interrupt
         # fire events each time a result is obtained, and when it is ready
         def f():
-            for k, data in enumerate(product(*[s.data for s in specs]),
-                                     start=1):
+            out = self.outstream
+            data = [s.data for s in specs]
+            for k, d in enumerate(product(*data), start=1):
                 # set parameters
-                for p, d in zip(p_paths, data):
-                    param.set(p, d)
+                print(f"Running case #{k}:", file=out)
+                for n, p, d_i in zip(p_names, p_paths, d):
+                    print(f"  {n} = {d_i:.6g~P}", file=out)
+                    param.set(p, d_i)
 
                 # run simulation
                 try:
@@ -154,6 +140,7 @@ class CaseStudy:
         specs = deepcopy(self.param_specs)
 
         p_paths = [p.path for p in specs]
+        p_names = [p.name for p in specs]
         r_paths = self.scenario.results.all_paths
         results = CaseStudyResults(p_paths, r_paths)
         Thread(target=f, daemon=True).start()

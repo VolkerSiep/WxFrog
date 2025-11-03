@@ -16,7 +16,7 @@ my_registry.define('kPag = kPa; offset: 101.325 = kPag = kPag')
 Q = my_registry.Quantity
 
 PAUSE_SECONDS = 0.1
-
+NUM_ITER = 5
 
 class MyModel(CalculationEngine):
     def __init__(self):
@@ -36,7 +36,7 @@ class MyModel(CalculationEngine):
         c = Q(0.1, "bar*h/m**3")
         p1 = Q(30, "bar")
         p2 = p1 - c * x
-        for i in range(10):
+        for i in range(NUM_ITER):
             sleep(PAUSE_SECONDS)
             print(f"Iteration {i} .. still doing nothing.", file=self.outstream)
         print(f"Now returning some fake values", file=self.outstream)
