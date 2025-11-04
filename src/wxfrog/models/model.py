@@ -141,6 +141,9 @@ class Model:
         self._case_study = CaseStudy(self._engine, scn, self._out_stream)
         return self._case_study
 
+    def interrupt_case_study(self):
+        self._case_study.interrupt()
+
     def serialize(self):
         return {
             "units": list(self._all_units),

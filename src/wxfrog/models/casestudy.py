@@ -72,7 +72,6 @@ class ParameterSpec:
 
 
 class CaseStudyResults:
-    # use a pandas frame? I do not want to pull in pandas just for this.
     def __init__(self, param_paths: Sequence[Path],
                  result_paths: Sequence[Path]):
         self.param_columns = param_paths
@@ -120,11 +119,10 @@ class CaseStudy:
                 except CalculationFailed as error:
                     pub.sendMessage(CALCULATION_FAILED, message=str(error))
                     if not self.on_fail_continue:
-                        # send event of case study ended
-                        return
+                        break
                 else:
                     results.add_result(param, DataStructure(res))
-                    pub.sendMessage(CASE_STUDY_PROGRESS, results=results, k=k)
+                    pub.sendMessage(CASE_STUDY_PROGRESS, k=k)
 
                 # catch if the case study was stopped.
                 with self.lock:
@@ -133,7 +131,7 @@ class CaseStudy:
                     break
 
             # send event of case study ended
-            pub.sendMessage(CASE_STUDY_ENDED, results=results)
+            pub.sendMessage(CASE_STUDY_ENDED)
 
         self._interrupt = False
         param = deepcopy(self.scenario.parameters)
@@ -142,7 +140,7 @@ class CaseStudy:
         p_paths = [p.path for p in specs]
         p_names = [p.name for p in specs]
         r_paths = self.scenario.results.all_paths
-        results = CaseStudyResults(p_paths, r_paths)
+        self.results = results = CaseStudyResults(p_paths, r_paths)
         Thread(target=f, daemon=True).start()
 
     def interrupt(self):

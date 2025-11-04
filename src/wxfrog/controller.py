@@ -19,28 +19,31 @@ class Controller:
         self.configuration = Configuration(config_directory)
 
         # event subscriptions
-        events = {EXPORT_CANVAS_GFX: self._on_export_canvas_gfx,
-                  RUN_MODEL: self._on_model_run,
-                  SHOW_PARAMETER_IN_CANVAS: self._on_show_parameter,
-                  NEW_UNIT_DEFINED: self._on_new_unit_defined,
-                  INITIALIZATION_DONE: self._on_initialisation_done,
-                  CALCULATION_DONE: self._on_calculation_done,
-                  OPEN_SCENARIOS: self._on_open_scenarios,
-                  OPEN_FILE: self._on_open_file,
-                  SAFE_FILE: self._on_save_file,
-                  SAFE_FILE_AS: self._on_save_file_as,
-                  EXIT_APP: self._on_exit_app,
-                  RUN_CASE_STUDY: self._on_run_case_study,
-                  CALCULATION_FAILED: self._on_calculation_failed,
-                  COPY_SCENARIO: self._on_copy_scenario,
-                  RENAME_SCENARIO: self._on_rename_scenario,
-                  DELETE_SCENARIO: self._on_delete_scenario,
-                  OPEN_RESULTS: self._on_open_results,
-                  RESULT_UNIT_CLICKED: self._on_result_unit_clicked,
-                  RESULT_UNIT_CHANGED: self._update_results,
-                  CASE_STUDY_PARAMETER_SELECTED: self._on_case_study_param_sel,
-                  CASE_STUDY_RUN: self._on_case_study_run
-                  }
+        events = {
+            EXPORT_CANVAS_GFX: self._on_export_canvas_gfx,
+            RUN_MODEL: self._on_model_run,
+            SHOW_PARAMETER_IN_CANVAS: self._on_show_parameter,
+            NEW_UNIT_DEFINED: self._on_new_unit_defined,
+            INITIALIZATION_DONE: self._on_initialisation_done,
+            CALCULATION_DONE: self._on_calculation_done,
+            OPEN_SCENARIOS: self._on_open_scenarios,
+            OPEN_FILE: self._on_open_file,
+            SAFE_FILE: self._on_save_file,
+            SAFE_FILE_AS: self._on_save_file_as,
+            EXIT_APP: self._on_exit_app,
+            RUN_CASE_STUDY: self._on_run_case_study,
+            CALCULATION_FAILED: self._on_calculation_failed,
+            COPY_SCENARIO: self._on_copy_scenario,
+            RENAME_SCENARIO: self._on_rename_scenario,
+            DELETE_SCENARIO: self._on_delete_scenario,
+            OPEN_RESULTS: self._on_open_results,
+            RESULT_UNIT_CLICKED: self._on_result_unit_clicked,
+            RESULT_UNIT_CHANGED: self._update_results,
+            CASE_STUDY_PARAMETER_SELECTED: self._on_case_study_param_sel,
+            CASE_STUDY_RUN: self._on_case_study_run,
+            CASE_STUDY_ENDED: self._on_case_study_ended,
+            CASE_STUDY_INTERRUPT: self._on_interrupt_case_study
+        }
 
         for evt_id, callback in events.items():
             pub.subscribe(callback, evt_id)
@@ -53,8 +56,19 @@ class Controller:
     def _on_case_study_run(self, specs):
         case_study = self.model.define_case_study()
         case_study.set_parameters(specs)
-        print("Hello")
         case_study.run()
+        self.frame.run_menu_item.Enable(False)
+        self.frame.case_study_menu_item.Enable(False)
+        self.frame.case_studies.allow_run(False)
+
+    def _on_interrupt_case_study(self):
+        self.model.interrupt_case_study()
+
+    def _on_case_study_ended(self):
+        self.frame.run_menu_item.Enable(True)
+        self.frame.case_study_menu_item.Enable(True)
+        self.frame.case_studies.allow_run(True)
+
 
     def _on_export_canvas_gfx(self):
         msg = "Save canvas as graphics"

@@ -8,13 +8,32 @@ from pint.registry import Quantity
 from wxfrog.models.casestudy import ParameterSpec
 from wxfrog.events import (
     CASE_STUDY_PARAMETER_SELECTED, CASE_STUDY_LIST_CHANGED,
-    CASE_STUDY_NUMBER_CHANGED, NEW_UNIT_DEFINED, CASE_STUDY_RUN)
+    CASE_STUDY_NUMBER_CHANGED, NEW_UNIT_DEFINED, CASE_STUDY_RUN,
+    CASE_STUDY_PROGRESS, CASE_STUDY_INTERRUPT)
 from .auxiliary import PopupBase
 from .quantity_control import (
     QuantityCtrl, QuantityChangedEvent, EVT_QUANTITY_CHANGED, EVT_UNIT_DEFINED)
 from .number_ctrl import LogIncrementCtrl, NumberStepsCtrl
 from ..utils import DataStructure
 
+class CaseProgressDialog(wx.ProgressDialog):
+    _MSG = "Cases processed: {k}/{m}"
+
+    def __init__(self, parent: wx.Window, maximum: int):
+        style = (wx.PD_APP_MODAL | wx.PD_CAN_ABORT | wx.PD_ELAPSED_TIME |
+                 wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME | wx.PD_AUTO_HIDE)
+        super().__init__(
+            "Case study progress", self._MSG.format(k=0, m=maximum),
+            maximum=maximum, parent=parent, style=style)
+        self._max = maximum
+        pub.subscribe(self._update, CASE_STUDY_PROGRESS)
+
+    def _update(self, k: int):
+        res, _ = self.Update(k, self._MSG.format(k=k, m=self._max))
+        print(res)
+        if not res:
+            pub.sendMessage(CASE_STUDY_INTERRUPT)
+            wx.CallAfter(self.Destroy)
 
 class ParameterSelectDialog(wx.Dialog):
     def __init__(self, parent: wx.Window, parameters: DataStructure):
@@ -347,6 +366,8 @@ class CaseStudyDialog(wx.Dialog):
 
         self._param_struct = None
         self._allow_run = False
+        self._progress = None
+
 
     def switch_button_enable(self, name: str, enabled: bool):
         self.buttons[name].Enable(enabled)
@@ -361,6 +382,7 @@ class CaseStudyDialog(wx.Dialog):
     def _on_run(self, event):
         specs = [p["spec"] for p in self.list_ctrl.parameters]
         pub.sendMessage(CASE_STUDY_RUN, specs=specs)
+        self._progress = CaseProgressDialog(self, self.list_ctrl.total_number)
 
     def _on_total_number_changed(self, number):
         num_fmt = "-" if number < 0 else str(number)
@@ -430,8 +452,6 @@ class CaseStudyDialog(wx.Dialog):
         self._update_run_button_status()
 
 # TODO:
-#  - enable run button iff there is at least one parameter, and the controller
-#    allows it
 #  - running the sensitivity study
 #    Store the results in a DataStructure with vectorial quantities, also
 #    keeping the ravelled list of parameter values.
