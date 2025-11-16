@@ -9,11 +9,12 @@ from wxfrog.models.casestudy import ParameterSpec
 from wxfrog.events import (
     CASE_STUDY_PARAMETER_SELECTED, CASE_STUDY_LIST_CHANGED,
     CASE_STUDY_NUMBER_CHANGED, NEW_UNIT_DEFINED, CASE_STUDY_RUN,
-    CASE_STUDY_PROGRESS, CASE_STUDY_INTERRUPT)
+    CASE_STUDY_PROGRESS, CASE_STUDY_INTERRUPT, CASE_STUDY_PROPERTIES_SELECTED)
 from .auxiliary import PopupBase
 from .quantity_control import (
     QuantityCtrl, QuantityChangedEvent, EVT_QUANTITY_CHANGED, EVT_UNIT_DEFINED)
 from .number_ctrl import LogIncrementCtrl, NumberStepsCtrl
+from .property_picker import PropertyPicker
 from ..utils import DataStructure
 
 class CaseProgressDialog(wx.ProgressDialog):
@@ -29,11 +30,13 @@ class CaseProgressDialog(wx.ProgressDialog):
         pub.subscribe(self._update, CASE_STUDY_PROGRESS)
 
     def _update(self, k: int):
-        res, _ = self.Update(k, self._MSG.format(k=k, m=self._max))
-        print(res)
-        if not res:
-            pub.sendMessage(CASE_STUDY_INTERRUPT)
-            wx.CallAfter(self.Destroy)
+        def do_update():
+            res, _ = self.Update(k, self._MSG.format(k=k, m=self._max))
+            if not res:
+                pub.sendMessage(CASE_STUDY_INTERRUPT)
+                self.Destroy()
+        wx.CallAfter(do_update)
+
 
 class ParameterSelectDialog(wx.Dialog):
     def __init__(self, parent: wx.Window, parameters: DataStructure):
@@ -337,7 +340,7 @@ class CaseStudyDialog(wx.Dialog):
                     ("up", wx.ART_GO_UP, False, self._on_up),
                     ("down", wx.ART_GO_DOWN, False, self._on_down),
                     ("del", wx.ART_CROSS_MARK, False, self._on_delete),
-                    ("copy", wx.ART_COPY, False, lambda x: None)]
+                    ("copy", wx.ART_COPY, False, self._on_copy_results)]
         self.buttons = {}
         for name, icon, enabled, call_back in btn_data:
             bmp = wx.ArtProvider.GetBitmap(icon , wx.ART_BUTTON, icon_size)
@@ -364,6 +367,7 @@ class CaseStudyDialog(wx.Dialog):
         self.SetSizerAndFit(sizer)
         pub.subscribe(self._on_list_changed, CASE_STUDY_LIST_CHANGED)
 
+        self._property_picker = PropertyPicker(self)
         self._param_struct = None
         self._allow_run = False
         self._progress = None
@@ -443,6 +447,13 @@ class CaseStudyDialog(wx.Dialog):
             self.buttons["down"].Enable(item < count - 1)
         self._update_run_button_status()
 
+    def _on_copy_results(self, event):
+        # select properties based on current selection
+        picker = self._property_picker
+        if picker.ShowModal() == wx.ID_OK:
+            pub.sendMessage(CASE_STUDY_PROPERTIES_SELECTED,
+                            paths=picker.selected_paths)
+
     def _update_run_button_status(self):
         param_defined = (self.list_ctrl.GetItemCount() > 0)
         self.switch_button_enable("run", self._allow_run and param_defined)
@@ -450,10 +461,4 @@ class CaseStudyDialog(wx.Dialog):
     def allow_run(self, enable: bool):
         self._allow_run = enable
         self._update_run_button_status()
-
-# TODO:
-#  - running the sensitivity study
-#    Store the results in a DataStructure with vectorial quantities, also
-#    keeping the ravelled list of parameter values.
-#  - copying results
-#    after filtering
+        self.switch_button_enable("copy", enable)

@@ -144,6 +144,9 @@ class Model:
     def interrupt_case_study(self):
         self._case_study.interrupt()
 
+    def collect_case_study_results(self, paths):
+        return self._case_study.collect(self.file_path, paths)
+
     def serialize(self):
         return {
             "units": list(self._all_units),

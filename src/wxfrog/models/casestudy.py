@@ -1,3 +1,4 @@
+from typing import Optional
 from collections.abc import Sequence
 from dataclasses import dataclass, KW_ONLY, field
 from threading import Thread, Lock
@@ -10,11 +11,13 @@ from pint.registry import Quantity  # actual type
 
 from wxfrog.utils import DataStructure
 from .engine import CalculationEngine, CalculationFailed
+from .html import HtmlTable
 from .scenarios import Scenario
 from ..events import CALCULATION_FAILED, CASE_STUDY_ENDED, CASE_STUDY_PROGRESS
 
 
 Path = tuple[str, ...]
+
 
 @dataclass
 class ParameterSpec:
@@ -83,12 +86,50 @@ class CaseStudyResults:
         self.params.append([params.get(p) for p in self.param_columns])
         self.results.append([results.get(p) for p in self.result_columns])
 
+    def collect(self, filename: str, paths: Sequence[Path]) -> str:
+        mask = self._filter_properties(paths)
+        param_names = [".".join(p) for p in self.param_columns]
+        param_units = [str(p.u) for p in self.params[0]]
+        prop_names = [".".join(p)
+                      for p, m in zip(self.result_columns, mask) if m]
+        prop_units = [str(p.u) for p, m in zip(self.results[0], mask) if m]
+        row_labels = list(map(str, range(1, len(self.results) + 1)))
+        table = HtmlTable(param_names + prop_names, row_labels)
+        table.label = "Case study"
+        table.title = "Unnamed" if filename is None else filename
+        table.add_column_unit_row(param_units + prop_units)
+        table.add_vertical_line(len(param_names) - 1)
+        table.set_top_rect_headers([["Parameter"], ["Unit"]])
+
+        data = [
+            [pa.m for pa in param_row] +
+            [pr.m for pr, m in zip(prop_row, mask) if m]
+            for param_row, prop_row in zip(self.params, self.results)
+        ]
+        table.set_data(data)
+        return table.render()
+
+    def _filter_properties(self, paths):
+        def matches(column, path):
+            for c, p in zip(column, path):
+                if c != p:
+                    return False
+            return True
+
+        def check(column):
+            for path in paths:
+                if matches(column, path):
+                    return  True
+            return False
+
+        return [check(col) for col in self.result_columns]
+
 
 class CaseStudy:
     def __init__(self, engine: CalculationEngine, scenario: Scenario,
                  out_stream):
         self.param_specs: list[ParameterSpec] = []
-        self.results: Sequence[DataStructure] = []
+        self.results: Optional[CaseStudyResults] = None
         self.engine = engine
         self.outstream = out_stream
         self.lock = Lock()
@@ -96,9 +137,12 @@ class CaseStudy:
         self.scenario = scenario
         self._interrupt = False
 
+    def collect(self, filename: str, paths: Sequence[Path]) -> str:
+        return self.results.collect(filename, paths)
+
     def set_parameters(self, specs: Sequence[ParameterSpec]):
         self.param_specs = specs
-        self.results = []
+        self.results = None
 
     def run(self):
         # make it possible to interrupt

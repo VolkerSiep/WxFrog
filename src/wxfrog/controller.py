@@ -42,7 +42,9 @@ class Controller:
             CASE_STUDY_PARAMETER_SELECTED: self._on_case_study_param_sel,
             CASE_STUDY_RUN: self._on_case_study_run,
             CASE_STUDY_ENDED: self._on_case_study_ended,
-            CASE_STUDY_INTERRUPT: self._on_interrupt_case_study
+            CASE_STUDY_INTERRUPT: self._on_interrupt_case_study,
+            CASE_STUDY_PROPERTIES_SELECTED:
+                self._on_case_study_properties_selected
         }
 
         for evt_id, callback in events.items():
@@ -69,6 +71,12 @@ class Controller:
         self.frame.case_study_menu_item.Enable(True)
         self.frame.case_studies.allow_run(True)
 
+    def _on_case_study_properties_selected(self, paths):
+        # set selection to case study object
+        # let it collect and format its results
+        # return the results here and put them into the copy buffer
+        html = self.model.collect_case_study_results(paths)
+        print(html)
 
     def _on_export_canvas_gfx(self):
         msg = "Save canvas as graphics"
