@@ -13,32 +13,32 @@ about: |
 about_size: [800, 300]
 
 
-bg_picture_name: bg_picture.svg
-bg_picture_width: 2000
-result_font_size: 10
+bg_picture_name: process_example.png
+bg_picture_width: 800
+result_font_size: 15
 
 run_engine_on_start: yes
 
 results:
   - path: ["y"]
     uom: psi
-    pos: [300, 200]
+    pos: [100, 230]
     fmt: "y = {:.2f~P}"
   - path: ["z"]
     uom: degC
-    pos: [300, 230]
+    pos: [100, 250]
     fmt: "z = {:.2f~P}"
 
 parameters:
   - path: ["a", "b", "x"]
-    pos: [300, 270]
+    pos: [100, 280]
     uom: m^3/h
     fmt: "Q = {:.2f~P}"
     min: 1.0
     max: 4.0
     name: Karl Heinz  # optional
   - path: ["c"]
-    pos: [300, 300]
+    pos: [100, 300]
     uom: bar
     fmt: "p = {:.2f~P}"
     min: 1.0

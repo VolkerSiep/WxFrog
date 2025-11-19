@@ -2,9 +2,9 @@ from importlib.resources import as_file
 from importlib.resources.abc import Traversable
 from collections.abc import Sequence
 from yaml import safe_load
-from wx.svg import SVGimage
 from pint.registry import Quantity
 
+from .views.image import SVGImageWrap, PNGImageWrap
 
 CONFIG_FILENAME = "configuration.yml"
 
@@ -17,12 +17,15 @@ class Configuration(dict):
                 config = safe_load(file)
         super().__init__(config)
 
-    def get_svg(self, name):
+    def get_image(self, name):
+        ending = name.split(".")[-1].lower()
         with as_file(self.config_dir.joinpath(name)) as path:
             with open(path, "rb") as file:
-                svg_bytes = bytes(file.read())
-        return SVGimage.CreateFromBytes(svg_bytes)
-
+                if ending == "svg":
+                    return SVGImageWrap(file)
+                elif ending == "png":
+                    return PNGImageWrap(file)
+        raise ValueError(f"Unsupported file format `{ending}`.")
 
 class ConfigurationError:
     def __init__(self, path: Sequence[str], message: str):

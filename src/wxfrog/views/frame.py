@@ -41,8 +41,23 @@ class FrogFrame(wx.Frame):
 
         # hack, just to prevent that window can be sized far too big.
         #  it's a shame that wx doesn't support better control.
-        self.SetMaxSize(self.canvas.bg_size + wx.Size(50, 70))
+        # self.SetMaxSize(self.canvas.bg_size + wx.Size(50, 70))
         self.Centre()
+
+        desired_size = self.canvas.bg_size
+        display = wx.Display().GetGeometry()
+        if desired_size.GetHeight() > display.GetHeight():
+            desired_size.SetHeight(display.GetHeight())
+        if desired_size.GetWidth() > display.GetWidth():
+            desired_size.SetWidth(display.GetWidth())
+
+        def adjust_size():
+            for _ in range(3):
+                ds = desired_size - self.canvas.GetSize()
+                self.SetSize(self.GetSize() + ds)
+            self.SetMaxSize(self.GetSize())
+
+        wx.CallLater(100, adjust_size)
 
 
     def define_menu(self):

@@ -27,10 +27,11 @@ class Canvas(wx.ScrolledWindow):
         self._dirty_parameter_ids = set()
 
         # configure bg picture and adapt virtual size
-        self.svg_bg = config.get_svg(config["bg_picture_name"])
+        self.background = config.get_image(config["bg_picture_name"])
         w_tg = config["bg_picture_width"]
-        w, h = w_tg, self.svg_bg.height * w_tg / self.svg_bg.width
+        w, h = w_tg, self.background.height * w_tg / self.background.width
         self.bg_size = wx.Size(int(w), int(h))
+        print(self.bg_size)
         self.SetVirtualSize(self.bg_size)
 
         self.SetScrollRate(50, 50)
@@ -80,7 +81,7 @@ class Canvas(wx.ScrolledWindow):
                     size = wx.Size(int(extent[0]), int(extent[1]))
                     e["hitbox"] = wx.Rect(wx.Point(*e["pos"]), size)
 
-        self.svg_bg.RenderToGC(gc, size=self.bg_size)
+        self.background.render_to_gc(gc, size=self.bg_size)
 
         # draw calculated properties
         font = wx.Font(

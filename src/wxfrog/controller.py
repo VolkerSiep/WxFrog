@@ -77,6 +77,8 @@ class Controller:
         # return the results here and put them into the copy buffer
         html = self.model.collect_case_study_results(paths)
         print(html)
+        # TODO: put into clipboard instead, and turn code of table unit test
+        #  into decent tests. Also let user select from actual properties
 
     def _on_export_canvas_gfx(self):
         msg = "Save canvas as graphics"
