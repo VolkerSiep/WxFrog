@@ -4,6 +4,7 @@ from io import TextIOBase, StringIO
 from threading import Lock
 from re import compile
 
+import wx
 from pint import UnitRegistry, Unit, DimensionalityError
 from pint.registry import Quantity, Unit
 
@@ -147,3 +148,17 @@ class DataStructure(dict, NestedQuantityMap):
             else:
                 return func(struct)
         return dive
+
+def copy_html_to_clipboard(html):
+    def fill_clipboard():
+        if wx.TheClipboard.Open():
+            wx.TheClipboard.SetData(data_obj)
+            wx.TheClipboard.Close()
+        else:
+            wx.MessageDialog(None, "Clipboard not available", "Copy error",
+                             style=wx.OK | wx.ICON_ERROR).ShowModal()
+
+    html_format = wx.DataFormat(wx.DF_HTML)
+    data_obj = wx.CustomDataObject(html_format)
+    data_obj.SetData(html.encode("utf-8"))
+    wx.CallLater(1000, fill_clipboard)

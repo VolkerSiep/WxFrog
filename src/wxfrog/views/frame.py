@@ -2,7 +2,6 @@ from collections.abc import Collection
 from pubsub.pub import sendMessage
 import wx
 
-from .colors import DARK_GREY
 from ..config import Configuration, ConfigurationError
 from .canvas import Canvas
 from .config_error_dialog import ConfigErrorDialog
@@ -13,7 +12,7 @@ from .casestudy import CaseStudyDialog
 from .about import AboutDialog
 from ..events import (
     EXPORT_CANVAS_GFX, RUN_MODEL, OPEN_SCENARIOS, OPEN_FILE, SAFE_FILE,
-    SAFE_FILE_AS, EXIT_APP, RUN_CASE_STUDY, OPEN_RESULTS)
+    SAFE_FILE_AS, EXIT_APP, RUN_CASE_STUDY, OPEN_RESULTS, COPY_STREAM_TABLE)
 from ..utils import ThreadedStringIO
 
 _FD_STYLE_LOAD = wx.FD_OPEN | wx.FD_FILE_MUST_EXIST
@@ -31,6 +30,7 @@ class FrogFrame(wx.Frame):
         self.canvas = Canvas(self, self.config)
         self.run_menu_item = None
         self.case_study_menu_item = None
+        self.copy_stream_table_menu_item = None
         self.define_menu()
 
         self.monitor = EngineMonitor(self, out_stream)
@@ -39,9 +39,6 @@ class FrogFrame(wx.Frame):
         self.case_studies = CaseStudyDialog(self)
         self._about = AboutDialog(self, config["about"], config["about_size"])
 
-        # hack, just to prevent that window can be sized far too big.
-        #  it's a shame that wx doesn't support better control.
-        # self.SetMaxSize(self.canvas.bg_size + wx.Size(50, 70))
         self.Centre()
 
         desired_size = self.canvas.bg_size
@@ -74,6 +71,11 @@ class FrogFrame(wx.Frame):
         item = file_menu.Append(wx.ID_ANY, "&Export canvas ...\tCTRL+g",
                                 "Export canvas as png")
         self.Bind(wx.EVT_MENU, lambda e: sendMessage(EXPORT_CANVAS_GFX), item)
+        item = file_menu.Append(wx.ID_ANY, "&Copy stream table\tCTRL+t",
+                                "Copy stream table to clipboard (for Excel)")
+        self.Bind(wx.EVT_MENU, self._on_copy_stream_table, item)
+        item.Enable(False)
+        self.copy_stream_table_menu_item = item
         item = file_menu.Append(wx.ID_ANY, "E&xit\tCTRL+x", "Exit simulator")
         self.Bind(wx.EVT_MENU, lambda e: self.Close(), item)
         menu_bar.Append(file_menu, "&File")
@@ -82,9 +84,11 @@ class FrogFrame(wx.Frame):
         item = engine_menu.Append(wx.ID_ANY, "&Run model\tCTRL+e",
                                   "Run model in background")
         self.Bind(wx.EVT_MENU, lambda e: sendMessage(RUN_MODEL), item)
+        item.Enable(False)
         self.run_menu_item = item
         item = engine_menu.Append(wx.ID_ANY, "&Case study ...\tCTRL+c",
                                  "Run case study")
+        item.Enable(False)
         self.case_study_menu_item = item
         self.Bind(wx.EVT_MENU, lambda e: sendMessage(RUN_CASE_STUDY), item)
         menu_bar.Append(engine_menu, "&Engine")
@@ -138,7 +142,6 @@ class FrogFrame(wx.Frame):
         title = f"{self.config['app_name']} - {filename}"
         self.SetTitle(title)
 
-
     def show_config_error_dialog(self, errors: Collection[ConfigurationError]):
         dialog = ConfigErrorDialog(self, errors)
         dialog.ShowModal()
@@ -148,3 +151,11 @@ class FrogFrame(wx.Frame):
         cs = self.case_studies
         cs.set_scenario(scenario)
         cs.Show()
+
+    def _on_copy_stream_table(self, event):
+        table_def = self.config["tables"]
+        if len(table_def) == 1:
+            sendMessage(COPY_STREAM_TABLE, name=table_def[0])
+        else:
+            # TODO: simple list dialog (Combobox) to select a table to copy.
+            print("Multiple stream tables not yet supported")

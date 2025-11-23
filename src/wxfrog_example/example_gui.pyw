@@ -15,7 +15,7 @@ my_registry.define('kPag = kPa; offset: 101.325 = kPag = kPag')
 
 Q = my_registry.Quantity
 
-PAUSE_SECONDS = 0.1
+PAUSE_SECONDS = 0.5
 NUM_ITER = 5
 
 class MyModel(CalculationEngine):
@@ -24,6 +24,7 @@ class MyModel(CalculationEngine):
 
     def initialise(self, out_stream):
         self.outstream = out_stream
+        sleep(1)
 
     def get_default_parameters(self):
         return {"a": {"b": {"x": Q(3, "m**3/h")}},

@@ -105,6 +105,10 @@ class Model:
         units = self.compatible_units(value)
         return { "spec": spec, "min": min_, "max": max_, "units": units}
 
+    def collect_stream_table(self, name: str):
+        # TODO: implement
+        pass
+
     def _initialize_parameters(self, param: DataStructure
                                ) -> Collection[ConfigurationError]:
         errors = []

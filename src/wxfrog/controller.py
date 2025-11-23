@@ -10,6 +10,7 @@ from .models.model import Model
 from .views.frame import FrogFrame
 from .config import Configuration
 from .events import *
+from .utils import copy_html_to_clipboard
 from wxfrog.models.scenarios import SCENARIO_CURRENT, SCENARIO_CONVERGED
 
 
@@ -43,7 +44,8 @@ class Controller:
             CASE_STUDY_ENDED: self._on_case_study_ended,
             CASE_STUDY_INTERRUPT: self._on_interrupt_case_study,
             CASE_STUDY_PROPERTIES_SELECTED:
-                self._on_case_study_properties_selected
+                self._on_case_study_properties_selected,
+            COPY_STREAM_TABLE: self._on_copy_stream_table
         }
 
         for evt_id, callback in events.items():
@@ -53,6 +55,10 @@ class Controller:
         self.frame = FrogFrame(self.configuration, self.model.out_stream)
         self.model.initialise_engine()
         self.frame.Show()
+
+    def _on_copy_stream_table(self, name: str):
+        html = self.model.collect_stream_table(name)
+        copy_html_to_clipboard(html)
 
     def _on_case_study_run(self, specs):
         case_study = self.model.define_case_study()
@@ -71,20 +77,8 @@ class Controller:
         self.frame.case_studies.allow_run(True)
 
     def _on_case_study_properties_selected(self, paths):
-        def fill_clipboard():
-            if wx.TheClipboard.Open():
-                wx.TheClipboard.SetData(data_obj)
-                wx.TheClipboard.Close()
-                print("Copied data")
-            else:
-                print("Clipboard not available!")
-
         html = self.model.collect_case_study_results(paths)
-        print(html)
-        html_format = wx.DataFormat(wx.DF_HTML)
-        data_obj = wx.CustomDataObject(html_format)
-        data_obj.SetData(html.encode("utf-8"))
-        wx.CallLater(1000, fill_clipboard)
+        copy_html_to_clipboard(html)
 
     def _on_export_canvas_gfx(self):
         msg = "Save canvas as graphics"
@@ -97,6 +91,7 @@ class Controller:
         self.frame.run_menu_item.Enable(False)
         self.frame.case_study_menu_item.Enable(False)
         self.frame.case_studies.allow_run(False)
+        self.frame.copy_stream_table_menu_item.Enable(False)
 
     def _on_calculation_done(self):
         # if parameters of converged are still the same as current, copy them.
@@ -108,6 +103,7 @@ class Controller:
         self.frame.run_menu_item.Enable()
         self.frame.case_study_menu_item.Enable()
         self.frame.case_studies.allow_run(True)
+        self.frame.copy_stream_table_menu_item.Enable()
 
     def _on_calculation_failed(self, message):
         self.frame.show_calculation_error(message)
@@ -122,6 +118,8 @@ class Controller:
         wx.CallAfter(self._update_parameters)
         self.frame.case_studies.switch_button_enable("add", True)
         self.frame.case_studies.allow_run(True)
+        self.frame.run_menu_item.Enable()
+        self.frame.case_study_menu_item.Enable()
         if self.configuration["run_engine_on_start"]:
             self._on_model_run()
 
