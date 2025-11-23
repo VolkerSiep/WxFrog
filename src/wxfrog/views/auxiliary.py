@@ -2,7 +2,7 @@ from typing import Any, Callable
 import wx
 from wx.core import PyEventBinder
 
-class PopupBase(wx.PopupTransientWindow):
+class PopupBase(wx.Dialog):
     """Abstract base class to open a transient window, covering a specific
     rectangle over the client control, and displaying any input control there.
     The operation is cancelled if the transient window loses focus. If a
@@ -11,8 +11,7 @@ class PopupBase(wx.PopupTransientWindow):
     """
     def __init__(self, parent: wx.Window, rect: wx.Rect,
                  initial_value, client_callback: Callable[[Any], bool]):
-        super().__init__(parent, flags=wx.BORDER_SIMPLE | wx.FRAME_SHAPED | wx.WANTS_CHARS)
-        # panel = wx.Panel(self)
+        super().__init__(parent, title="")
         self._client_callback = client_callback
 
         self._ctrl = self.create_ctrl(self, initial_value)
@@ -23,14 +22,13 @@ class PopupBase(wx.PopupTransientWindow):
         self._ctrl.SetMinSize(min_size)
         ds = min_size - size
         offset = wx.Point(4 + ds.GetWidth() // 2, 4 + ds.GetHeight() // 2)
-        pos = parent.ClientToScreen(rect.GetPosition()) - offset
+        pos = rect.GetPosition() - offset
         self.SetPosition(pos)
         sizer = wx.BoxSizer(wx.VERTICAL)
 
         sizer.Add(self._ctrl, 1, wx.EXPAND | wx.ALL, 2)
         self.SetSizerAndFit(sizer)
 
-        self.Bind(wx.EVT_KILL_FOCUS, lambda e: self.Dismiss())
 
     def bind_ctrl(self, event_type: PyEventBinder):
         """Bind an event to client control that triggers sending result
@@ -48,7 +46,27 @@ class PopupBase(wx.PopupTransientWindow):
         # cannot use ABC baseclass because of wx's SWIG meta-type of classes
         raise NotImplementedError("Abstract method call")
 
+    def _dismiss(self, event=None):
+        self.EndModal(wx.ID_ANY)
+        wx.CallLater(200, self.Destroy)
+
     def _callback(self, event):
         result = self.collect_result(event, self._ctrl)
         if self._client_callback(result):
-            self.Dismiss()
+            self._dismiss()
+
+
+class APoint(wx.Point):
+    @classmethod
+    def from_point(cls, point: wx.Point):
+        return cls(point.x, point.y)
+
+    def __add__(self, size: wx.Size|wx.Point):
+        return APoint(self.x + size.x, self.y + size.y)
+
+    def __sub__(self, size: wx.Size|wx.Point):
+        return APoint(self.x - size.x, self.y - size.y)
+
+class ASize(wx.Size):
+    def __floordiv__(self, other: int):
+        return ASize(self.x // other, self.y // other)

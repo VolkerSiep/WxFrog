@@ -40,6 +40,8 @@ class ParameterDialog(wx.Dialog):
     def _qty_changed(self, event):
         self.ok.Enable(event.in_bounds)
         self._value = event.new_value
+        if event.in_bounds:
+            self.ok.SetFocus()
 
     @staticmethod
     def _new_unit_defined(event):

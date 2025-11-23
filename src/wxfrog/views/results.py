@@ -217,14 +217,20 @@ class ResultDataViewCtrl(DataViewCtrl):
         self._expanded = expanded
 
     def on_collapse_all(self, event):
-        self.model.GetChildren(NullDataViewItem, children := [])
-        for c in children:
-            self.Collapse(c)
+        def collapse(item):
+            self.model.GetChildren(item, children := [])
+            for c in children:
+                collapse(c)
+                self.Collapse(c)
+        collapse(NullDataViewItem)
 
     def on_expand_all(self, event):
-        self.model.GetChildren(NullDataViewItem, children := [])
-        for c in children:
-            self.ExpandChildren(c)
+        def expand(item):
+            self.model.GetChildren(item, children := [])
+            for c in children:
+                # expand(item)
+                self.ExpandChildren(c)
+        expand(NullDataViewItem)
 
     def _on_item_activated(self, event):
         if event.GetColumn() != 2:
@@ -245,11 +251,12 @@ class ResultDataViewCtrl(DataViewCtrl):
                 style = wx.ICON_ERROR| wx.OK
                 title = "Unit of measurement error"
                 wx.MessageDialog(self, msg, title, style=style).ShowModal()
-            else:
-                self.model.ItemChanged(item)
-                if new_unit not in units:
-                    pub.sendMessage(NEW_UNIT_DEFINED, unit=new_unit)
-                pub.sendMessage(RESULT_UNIT_CHANGED)
+                return False
+            self.model.ItemChanged(item)
+            if new_unit not in units:
+                pub.sendMessage(NEW_UNIT_DEFINED, unit=new_unit)
+            pub.sendMessage(RESULT_UNIT_CHANGED)
+            return True
 
         col = self.GetColumn(2)
         path = self.model.ItemToObject(item)
@@ -258,8 +265,11 @@ class ResultDataViewCtrl(DataViewCtrl):
 
         # position and size
         rect = self.GetItemRect(item, col)
-        popup = UnitPopup(self, active_unit, units, commit, rect)
-        wx.CallAfter(popup.Popup)
+        rect.SetPosition(rect.GetPosition() + self.GetPosition())
+
+        popup = UnitPopup(self.GetParent(), active_unit,
+                          units, commit, rect)
+        wx.CallAfter(popup.ShowModal)
 
     def set_data(self, data: DataStructure):
         self._record_expanded = False
