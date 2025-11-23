@@ -7,7 +7,6 @@ import wx
 
 from .models.engine import CalculationEngine
 from .models.model import Model
-from .models.casestudy import CaseStudy
 from .views.frame import FrogFrame
 from .config import Configuration
 from .events import *
@@ -72,13 +71,20 @@ class Controller:
         self.frame.case_studies.allow_run(True)
 
     def _on_case_study_properties_selected(self, paths):
-        # set selection to case study object
-        # let it collect and format its results
-        # return the results here and put them into the copy buffer
+        def fill_clipboard():
+            if wx.TheClipboard.Open():
+                wx.TheClipboard.SetData(data_obj)
+                wx.TheClipboard.Close()
+                print("Copied data")
+            else:
+                print("Clipboard not available!")
+
         html = self.model.collect_case_study_results(paths)
         print(html)
-        # TODO: put into clipboard instead, and turn code of table unit test
-        #  into decent tests. Also let user select from actual properties
+        html_format = wx.DataFormat(wx.DF_HTML)
+        data_obj = wx.CustomDataObject(html_format)
+        data_obj.SetData(html.encode("utf-8"))
+        wx.CallLater(1000, fill_clipboard)
 
     def _on_export_canvas_gfx(self):
         msg = "Save canvas as graphics"
@@ -170,8 +176,8 @@ class Controller:
         event.Skip()
 
     def _on_run_case_study(self):
-        parameters = self.model.scenarios[SCENARIO_CURRENT].parameters
-        self.frame.show_case_studies(parameters)
+        scenario = self.model.scenarios[SCENARIO_CURRENT]
+        self.frame.show_case_studies(scenario)
 
     def _on_show_parameter(self, item):
         scn_current = self.model.scenarios[SCENARIO_CURRENT]

@@ -359,7 +359,6 @@ class CaseStudyDialog(wx.Dialog):
         pub.subscribe(self._on_total_number_changed, CASE_STUDY_NUMBER_CHANGED)
         sizer_2.Add(self.total_number_label, 1,
                     wx.ALL | wx.ALIGN_CENTER_VERTICAL, 3)
-        # sizer_2.AddStretchSpacer(1)
         for name in "copy run".split():
             sizer_2.Add(self.buttons[name], 0, wx.EXPAND | wx.ALL, 3)
         sizer.Add(sizer_2, 0, wx.EXPAND, 0)
@@ -367,7 +366,7 @@ class CaseStudyDialog(wx.Dialog):
         pub.subscribe(self._on_list_changed, CASE_STUDY_LIST_CHANGED)
 
         self._property_picker = PropertyPicker(self)
-        self._param_struct = None
+        self._scenario = None
         self._allow_run = False
         self._progress = None
 
@@ -375,8 +374,8 @@ class CaseStudyDialog(wx.Dialog):
     def switch_button_enable(self, name: str, enabled: bool):
         self.buttons[name].Enable(enabled)
 
-    def set_param_struct(self, param_struct):
-        self._param_struct = param_struct
+    def set_scenario(self, scenario):
+        self._scenario = scenario
 
     def _select(self, item):
         self.list_ctrl.SetItemState(
@@ -394,7 +393,7 @@ class CaseStudyDialog(wx.Dialog):
 
     def _on_add(self, event):
         # show tree dialog with parameters to select from
-        param = self._param_struct
+        param = self._scenario.parameters
         dialog = ParameterSelectDialog(self, param)
         if dialog.ShowModal() != wx.ID_OK:
             return
@@ -449,6 +448,7 @@ class CaseStudyDialog(wx.Dialog):
     def _on_copy_results(self, event):
         # select properties based on current selection
         picker = self._property_picker
+        picker.set_paths(self._scenario.results)
         if picker.ShowModal() == wx.ID_OK:
             pub.sendMessage(CASE_STUDY_PROPERTIES_SELECTED,
                             paths=picker.selected_paths)
