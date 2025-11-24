@@ -7,7 +7,6 @@ import wx
 
 from .models.engine import CalculationEngine
 from .models.model import Model
-from .models.casestudy import CaseStudy
 from .views.frame import FrogFrame
 from .config import Configuration
 from .events import *

@@ -12,6 +12,12 @@ from ..utils import DataStructure
 from .parameter import ParameterDialog
 from .colors import INPUT_BLUE, BLACK, ERROR_RED, LIGHT_GREY
 
+PROP_STUB = """
+  - path: []
+    uom: ""
+    pos: [{x:d}, {y:d}]
+    fmt: "{{:.2f~P}}"
+"""[1:]
 
 class Canvas(wx.ScrolledWindow):
     RESULT_VALID = 0
@@ -31,17 +37,36 @@ class Canvas(wx.ScrolledWindow):
         w_tg = config["bg_picture_width"]
         w, h = w_tg, self.background.height * w_tg / self.background.width
         self.bg_size = wx.Size(int(w), int(h))
-        print(self.bg_size)
-        self.SetVirtualSize(self.bg_size)
 
         self.SetScrollRate(50, 50)
 
         self.Bind(wx.EVT_PAINT, self.on_paint)
         self.Bind(wx.EVT_MOUSEWHEEL, self._on_mousewheel)
         self.Bind(wx.EVT_LEFT_DOWN, self._on_left_click)
+        self.SetBackgroundColour(wx.Colour(config["bg_color"]))
+
+        def set_size():
+            self.SetVirtualSize(self.bg_size)
+
+        wx.CallLater(50, set_size)
 
     def _on_left_click(self, event: wx.MouseEvent):
         pos = self._get_pos(event.GetPosition())
+
+        # copy parameter / property definition stub to clipboard if pressed
+        # with <ctrl>-key.
+
+        if event.ControlDown():
+            text = PROP_STUB.format(x=pos[0], y=pos[1])
+            data_obj = wx.TextDataObject(text)
+            print(text)
+
+            if wx.TheClipboard.Open():
+                wx.TheClipboard.SetData(data_obj)
+                wx.TheClipboard.Close()
+            else:
+                print("Clipboard not available!")
+            return
 
         for item in self._result_labels:
             if item["hitbox"].Contains(pos):
@@ -54,6 +79,7 @@ class Canvas(wx.ScrolledWindow):
         for item in self._parameter_labels:
             if item["hitbox"].Contains(pos):
                 sendMessage(SHOW_PARAMETER_IN_CANVAS, item=item)
+
 
     def _on_mousewheel(self, event: wx.MouseEvent):
         if event.ShiftDown(): # horizontal scroll
@@ -142,7 +168,7 @@ class Canvas(wx.ScrolledWindow):
                 q = values.get(item["path"])
             except KeyError:
                 return None
-            entry = {"label": item["fmt"].format(q),
+            entry = {"label": item["fmt"].format(q.to(item["uom"])),
                      "id": ".".join(item["path"])}
             entry.update(item)
             if "name" not in entry:

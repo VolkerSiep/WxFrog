@@ -16,6 +16,7 @@ about_size: [800, 300]
 bg_picture_name: process_example.png
 bg_picture_width: 800
 result_font_size: 15
+bg_color: white
 
 run_engine_on_start: yes
 
