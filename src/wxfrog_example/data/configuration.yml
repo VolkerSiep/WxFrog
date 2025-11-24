@@ -12,7 +12,6 @@ about: |
 
 about_size: [800, 300]
 
-
 bg_picture_name: process_example.png
 bg_picture_width: 800
 result_font_size: 15
@@ -25,6 +24,7 @@ results:
     uom: psi
     pos: [100, 230]
     fmt: "y = {:.2f~P}"
+    tip: A very important key result
   - path: ["z"]
     uom: degC
     pos: [100, 250]
@@ -38,12 +38,14 @@ parameters:
     min: 1.0
     max: 4.0
     name: Karl Heinz  # optional
+    tip: Some volume flow
   - path: ["c"]
     pos: [100, 300]
     uom: bar
     fmt: "p = {:.2f~P}"
     min: 1.0
     max: 100.0
+    tip: An unimportant constant
 
 tables:
   - name: Stream table

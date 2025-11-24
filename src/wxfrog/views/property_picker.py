@@ -1,3 +1,5 @@
+from collections.abc import Mapping
+
 import wx
 from wx.dataview import (
     TreeListCtrl, TL_SINGLE, TL_NO_HEADER, TL_3STATE,
@@ -23,6 +25,16 @@ class PropertyTreeListCtrl(TreeListCtrl):
         bc = self.AppendItem(b, "bc")
 
         self.Bind(EVT_TREELIST_ITEM_CHECKED, self._on_item_checked)
+
+    def set_paths(self, results):
+        def add(item, structure):
+            if not isinstance(structure, Mapping):
+                return
+            for k, v in structure.items():
+                add(self.AppendItem(item, k), v)
+
+        self.DeleteAllItems()
+        add(self.GetRootItem(), results)
 
     @property
     def selected_paths(self):
@@ -88,6 +100,9 @@ class PropertyPicker(wx.Dialog):
 
         cancel.Bind(wx.EVT_BUTTON, lambda e: self.EndModal(wx.ID_CANCEL))
         ok.Bind(wx.EVT_BUTTON, lambda e: self.EndModal(wx.ID_OK))
+
+    def set_paths(self, results):
+        self.ctrl.set_paths(results)
 
     @property
     def selected_paths(self):

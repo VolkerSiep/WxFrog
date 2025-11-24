@@ -69,7 +69,6 @@ class QuantityCtrl(wx.Window):
         self.unit_ctrl.Bind(wx.EVT_TEXT_ENTER, self._on_unit_changed)
         self.unit_ctrl.Bind(wx.EVT_COMBOBOX, self._on_unit_changed)
         self.magnitude_ctrl.Bind(wx.EVT_TEXT_ENTER, self._on_magnitude_changed)
-        self.magnitude_ctrl.Bind(wx.EVT_KILL_FOCUS, self._on_magnitude_changed)
 
     def _on_unit_changed(self, event):
         orig_bg = self.unit_ctrl.GetBackgroundColour()

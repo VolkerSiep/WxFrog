@@ -112,13 +112,13 @@ class NumberPopup(PopupBase):
     def __init__(self, parent: wx.Window, value: int, callback, rect: wx.Rect):
         super().__init__(parent, rect, value, callback)
         self.bind_ctrl(wx.EVT_TEXT_ENTER)
-        self.bind_ctrl(wx.EVT_KILL_FOCUS)
 
     def create_ctrl(self, parent, initial_value):
         return NumberStepsCtrl(parent, initial_value)
 
-    def collect_result(self, event: QuantityChangedEvent, ctrl):
-        return int(event.GetString())
+    def collect_result(self, event: QuantityChangedEvent,
+                       ctrl: NumberStepsCtrl):
+        return int(ctrl.value)
 
 
 class FactorPopup(PopupBase):
@@ -126,7 +126,6 @@ class FactorPopup(PopupBase):
                  callback, rect: wx.Rect):
         super().__init__(parent, rect, value, callback)
         self.bind_ctrl(wx.EVT_TEXT_ENTER)
-        self.bind_ctrl(wx.EVT_KILL_FOCUS)
 
     def create_ctrl(self, parent, initial_value):
         return LogIncrementCtrl(parent, initial_value)
@@ -185,7 +184,7 @@ class ParameterListCtrl(wx.ListCtrl):
 
         name = self.GetItemText(item, col=1)
         popup = NamePopup(self, name, commit, rect)
-        wx.CallAfter(popup.Popup)
+        wx.CallAfter(popup.ShowModal)
 
     def _on_edit_min(self, item, rect):
         def commit(event):
@@ -207,7 +206,7 @@ class ParameterListCtrl(wx.ListCtrl):
         spec = info["spec"]
         popup = QuantityPopup(self, spec.min, commit, rect,
                               info["units"], info["min"], info["max"])
-        wx.CallAfter(popup.Popup)
+        wx.CallAfter(popup.ShowModal)
 
     def _on_edit_max(self, item, rect):
         def commit(event):
@@ -229,7 +228,7 @@ class ParameterListCtrl(wx.ListCtrl):
         spec = info["spec"]
         popup = QuantityPopup(self, spec.max, commit, rect,
                               info["units"], info["min"], info["max"])
-        wx.CallAfter(popup.Popup)
+        wx.CallAfter(popup.ShowModal)
 
     def _on_edit_incr(self, item, rect):
         def commit_incr(event):
@@ -256,7 +255,7 @@ class ParameterListCtrl(wx.ListCtrl):
             popup = QuantityPopup(self, spec.incr, commit_incr,
                                   rect, info["units"])
 
-        wx.CallAfter(popup.Popup)
+        wx.CallAfter(popup.ShowModal)
 
     def _on_edit_number(self, item, rect):
         def commit(number: int):
@@ -269,7 +268,7 @@ class ParameterListCtrl(wx.ListCtrl):
         info = self.parameters[item]
         spec = info["spec"]
         popup = NumberPopup(self, spec.num, commit, rect)
-        wx.CallAfter(popup.Popup)
+        wx.CallAfter(popup.ShowModal)
 
     def _on_toggle_log(self, item, rect):
         info = self.parameters[item]
@@ -360,7 +359,6 @@ class CaseStudyDialog(wx.Dialog):
         pub.subscribe(self._on_total_number_changed, CASE_STUDY_NUMBER_CHANGED)
         sizer_2.Add(self.total_number_label, 1,
                     wx.ALL | wx.ALIGN_CENTER_VERTICAL, 3)
-        # sizer_2.AddStretchSpacer(1)
         for name in "copy run".split():
             sizer_2.Add(self.buttons[name], 0, wx.EXPAND | wx.ALL, 3)
         sizer.Add(sizer_2, 0, wx.EXPAND, 0)
@@ -368,7 +366,7 @@ class CaseStudyDialog(wx.Dialog):
         pub.subscribe(self._on_list_changed, CASE_STUDY_LIST_CHANGED)
 
         self._property_picker = PropertyPicker(self)
-        self._param_struct = None
+        self._scenario = None
         self._allow_run = False
         self._progress = None
 
@@ -376,8 +374,8 @@ class CaseStudyDialog(wx.Dialog):
     def switch_button_enable(self, name: str, enabled: bool):
         self.buttons[name].Enable(enabled)
 
-    def set_param_struct(self, param_struct):
-        self._param_struct = param_struct
+    def set_scenario(self, scenario):
+        self._scenario = scenario
 
     def _select(self, item):
         self.list_ctrl.SetItemState(
@@ -395,7 +393,7 @@ class CaseStudyDialog(wx.Dialog):
 
     def _on_add(self, event):
         # show tree dialog with parameters to select from
-        param = self._param_struct
+        param = self._scenario.parameters
         dialog = ParameterSelectDialog(self, param)
         if dialog.ShowModal() != wx.ID_OK:
             return
@@ -450,6 +448,7 @@ class CaseStudyDialog(wx.Dialog):
     def _on_copy_results(self, event):
         # select properties based on current selection
         picker = self._property_picker
+        picker.set_paths(self._scenario.results)
         if picker.ShowModal() == wx.ID_OK:
             pub.sendMessage(CASE_STUDY_PROPERTIES_SELECTED,
                             paths=picker.selected_paths)

@@ -8,10 +8,14 @@ from pubsub.pub import sendMessage
 from ..config import Configuration
 from ..events import SHOW_PARAMETER_IN_CANVAS
 from ..utils import DataStructure
+from ..models.tooltip import TooltipInfo
 
 from .parameter import ParameterDialog
 from .colors import INPUT_BLUE, BLACK, ERROR_RED, LIGHT_GREY
+from .auxiliary import APoint, ASize
 
+_TOOLTIP_CHECK_INTERVAL = 200  # ms
+_TOOLTIP_DURATION = 5  # times check interval -> duration after hover
 PROP_STUB = """
   - path: []
     uom: ""
@@ -31,12 +35,14 @@ class Canvas(wx.ScrolledWindow):
         self._results_mode = False
         self._parameter_labels = []
         self._dirty_parameter_ids = set()
+        self._tooltip = TooltipInfo()
 
         # configure bg picture and adapt virtual size
         self.background = config.get_image(config["bg_picture_name"])
         w_tg = config["bg_picture_width"]
         w, h = w_tg, self.background.height * w_tg / self.background.width
         self.bg_size = wx.Size(int(w), int(h))
+        self.SetVirtualSize(self.bg_size)
 
         self.SetScrollRate(50, 50)
 
@@ -49,6 +55,33 @@ class Canvas(wx.ScrolledWindow):
             self.SetVirtualSize(self.bg_size)
 
         wx.CallLater(50, set_size)
+
+        self._tool_tip_timer = wx.Timer()
+        self._tool_tip_timer.Start(_TOOLTIP_CHECK_INTERVAL)
+        self._tool_tip_timer.Bind(wx.EVT_TIMER, self._on_check_tooltip)
+
+    def _on_check_tooltip(self, event):
+        def process(e):
+            if not tooltip.is_for(e):
+                tooltip.set_item(e)
+            else:
+                if tooltip.counter <= 0:
+                    tooltip.pos = pos_canvas
+                    tooltip.pos_panel = pos
+                tooltip.counter = _TOOLTIP_DURATION  # reset counter
+            self.Refresh()  # tooltip visibility changed
+
+        tooltip = self._tooltip
+        tooltip.counter -= 1
+        if tooltip.counter == 0:
+            self.Refresh()  # tooltip no longer visible
+
+        pos = self.ScreenToClient(wx.GetMousePosition())
+        pos_canvas = self._get_pos(pos)
+        for item in self._result_labels + self._parameter_labels:
+            if item["hitbox"].Contains(pos_canvas):
+                process(item)
+                return
 
     def _on_left_click(self, event: wx.MouseEvent):
         pos = self._get_pos(event.GetPosition())
@@ -103,7 +136,7 @@ class Canvas(wx.ScrolledWindow):
                            color_dirty if dirty else color_clean)
                 gc.DrawText(e["label"], *e["pos"])
                 if "hitbox" not in e:
-                    extent = gc.GetFullTextExtent(e["label"])[:2]
+                    extent = gc.GetFullTextExtent(e["label"])
                     size = wx.Size(int(extent[0]), int(extent[1]))
                     e["hitbox"] = wx.Rect(wx.Point(*e["pos"]), size)
 
@@ -119,6 +152,45 @@ class Canvas(wx.ScrolledWindow):
 
         draw_labels(self._result_labels, font, color)
         draw_labels(self._parameter_labels, font, INPUT_BLUE, font.Bold())
+
+        self._draw_tooltip(gc)
+
+    def _draw_tooltip(self, gc: wx.GraphicsContext):
+        tooltip = self._tooltip
+        if tooltip.counter <= 0:
+            return
+        item = tooltip.item
+        pos = APoint.from_point(tooltip.pos)
+        try:
+            tip = item["tip"]
+        except KeyError:
+            tip = f"{item['name']} [{item['uom']}]"
+
+        extent = gc.GetFullTextExtent(tip)
+        size = ASize(int(extent[0]) + 4, int(extent[1]) + 4)
+        pos -= size // 2
+        p_pos = APoint.from_point(tooltip.pos_panel)
+
+        # make sure that we stay on the canvas
+        rect = [p_pos - size // 2, p_pos + size // 2]
+        canvas_size = self.GetSize()
+        if rect[0].x < 0:
+            pos.x -= rect[0].x
+        if rect[0].y < 0:
+            pos.y -= rect[0].y
+        if (dx:= rect[1].x - canvas_size.x) > 0:
+            pos.x -= dx
+        if (dy:= rect[1].y - canvas_size.y) > 0:
+            pos.y -= dy
+
+        gc.SetPen(wx.Pen(INPUT_BLUE))
+        gc.SetBrush(wx.Brush(LIGHT_GREY))
+        gc.DrawRoundedRectangle(pos[0], pos[1], size[0], size[1], 4)
+        font = wx.Font(
+            self.config["result_font_size"], wx.FONTFAMILY_DEFAULT,
+            wx.FONTSTYLE_SLANT, wx.FONTWEIGHT_NORMAL, False)
+        gc.SetFont(font, INPUT_BLUE)
+        gc.DrawText(tip, pos[0] + 2, pos[1] + 2)
 
     def on_paint(self, event):
         dc = wx.PaintDC(self)

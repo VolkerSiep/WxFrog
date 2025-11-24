@@ -17,7 +17,6 @@ class ValidatedTextCtrl(wx.Window):
         self.SetMinSize(self.GetSize())
 
         self.ctrl.Bind(wx.EVT_TEXT_ENTER, self._on_value_changed)
-        self.ctrl.Bind(wx.EVT_KILL_FOCUS, self._on_value_changed)
 
     def _on_value_changed(self, event):
         ctrl = self.ctrl
@@ -26,7 +25,7 @@ class ValidatedTextCtrl(wx.Window):
             ctrl.SetValue(self.format(self.value))
 
         orig_bg = self.ctrl.GetBackgroundColour()
-        str_value = event.GetString()
+        str_value = self.ctrl.GetValue()
         if not self.validate(str_value):
             ctrl.SetBackgroundColour(ERROR_RED)
             wx.CallLater(self.ERROR_SHOW_DURATION, reset)
