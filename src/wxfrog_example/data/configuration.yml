@@ -38,7 +38,9 @@ parameters:
     min: 1.0
     max: 4.0
     name: Karl Heinz  # optional
-    tip: Some volume flow
+    tip: | 
+        Some volume
+        flow
   - path: ["c"]
     pos: [100, 300]
     uom: bar

@@ -158,7 +158,12 @@ def copy_html_to_clipboard(html):
             wx.MessageDialog(None, "Clipboard not available", "Copy error",
                              style=wx.OK | wx.ICON_ERROR).ShowModal()
 
-    html_format = wx.DataFormat(wx.DF_HTML)
-    data_obj = wx.CustomDataObject(html_format)
-    data_obj.SetData(html.encode("utf-8"))
-    wx.CallLater(1000, fill_clipboard)
+    # TODO: make it an option whether to copy in html or text format.
+    #  Excel requires text, while LibreOffice requires html.
+    if True:
+        data_obj = wx.TextDataObject(html)
+    else:
+        html_format = wx.DataFormat(wx.DF_HTML)
+        data_obj = wx.CustomDataObject(html_format)
+        data_obj.SetData(html.encode("utf-8"))
+    wx.CallLater(100, fill_clipboard)

@@ -53,7 +53,7 @@ class PopupBase(wx.Dialog):
     def _callback(self, event):
         result = self.collect_result(event, self._ctrl)
         if self._client_callback(result):
-            self._dismiss()
+            self.EndModal(wx.ID_OK)
 
 
 class APoint(wx.Point):

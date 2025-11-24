@@ -31,8 +31,8 @@ class CaseProgressDialog(wx.ProgressDialog):
 
     def _update(self, k: int):
         def do_update():
-            res, _ = self.Update(k, self._MSG.format(k=k, m=self._max))
-            if not res:
+            res, _ = self.Update(k-1, self._MSG.format(k=k, m=self._max))
+            if not res or k == self._max:
                 pub.sendMessage(CASE_STUDY_INTERRUPT)
                 self.Destroy()
         wx.CallAfter(do_update)
@@ -42,7 +42,7 @@ class ParameterSelectDialog(wx.Dialog):
     def __init__(self, parent: wx.Window, parameters: DataStructure):
         super().__init__(parent, title="Select a parameter")
         sizer = wx.BoxSizer(wx.VERTICAL)
-        style = wx.TR_HAS_BUTTONS | wx.TR_HIDE_ROOT
+        style = wx.TR_HAS_BUTTONS | wx.TR_LINES_AT_ROOT | wx.TR_HIDE_ROOT
         self.tree = wx.TreeCtrl(self, style=style)
         self.tree.SetMinSize(wx.Size(500, 500))
         sizer.Add(self.tree, 1, wx.EXPAND | wx.ALL, 3)

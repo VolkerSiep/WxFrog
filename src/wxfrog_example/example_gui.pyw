@@ -15,7 +15,7 @@ my_registry.define('kPag = kPa; offset: 101.325 = kPag = kPag')
 
 Q = my_registry.Quantity
 
-PAUSE_SECONDS = 0.5
+PAUSE_SECONDS = 0.1
 NUM_ITER = 5
 
 class MyModel(CalculationEngine):

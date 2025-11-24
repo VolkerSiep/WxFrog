@@ -43,13 +43,13 @@ class Canvas(wx.ScrolledWindow):
         w, h = w_tg, self.background.height * w_tg / self.background.width
         self.bg_size = wx.Size(int(w), int(h))
         self.SetVirtualSize(self.bg_size)
+        self.SetBackgroundStyle(wx.BG_STYLE_PAINT)
 
         self.SetScrollRate(50, 50)
 
         self.Bind(wx.EVT_PAINT, self.on_paint)
         self.Bind(wx.EVT_MOUSEWHEEL, self._on_mousewheel)
         self.Bind(wx.EVT_LEFT_DOWN, self._on_left_click)
-        self.SetBackgroundColour(wx.Colour(config["bg_color"]))
 
         def set_size():
             self.SetVirtualSize(self.bg_size)
@@ -140,6 +140,12 @@ class Canvas(wx.ScrolledWindow):
                     size = wx.Size(int(extent[0]), int(extent[1]))
                     e["hitbox"] = wx.Rect(wx.Point(*e["pos"]), size)
 
+        # fill background explicitly
+        bg = wx.Colour(self.config["bg_color"])
+        gc.SetBrush(gc.CreateBrush(wx.Brush(bg)))
+        gc.SetPen(wx.TRANSPARENT_PEN)
+        gc.DrawRectangle(0, 0, *self.GetClientSize())
+        # load background picture
         self.background.render_to_gc(gc, size=self.bg_size)
 
         # draw calculated properties
@@ -167,7 +173,7 @@ class Canvas(wx.ScrolledWindow):
             tip = f"{item['name']} [{item['uom']}]"
 
         extent = gc.GetFullTextExtent(tip)
-        size = ASize(int(extent[0]) + 4, int(extent[1]) + 4)
+        size = ASize(int(extent[0]) + 8, int(extent[1]) + 4)
         pos -= size // 2
         p_pos = APoint.from_point(tooltip.pos_panel)
 
@@ -190,10 +196,11 @@ class Canvas(wx.ScrolledWindow):
             self.config["result_font_size"], wx.FONTFAMILY_DEFAULT,
             wx.FONTSTYLE_SLANT, wx.FONTWEIGHT_NORMAL, False)
         gc.SetFont(font, INPUT_BLUE)
-        gc.DrawText(tip, pos[0] + 2, pos[1] + 2)
+        gc.DrawText(tip, pos[0] + 4, pos[1] + 2)
 
     def on_paint(self, event):
-        dc = wx.PaintDC(self)
+        # dc = wx.PaintDC(self)
+        dc = wx.AutoBufferedPaintDC(self)
         self.PrepareDC(dc)
         gc = wx.GraphicsContext.Create(dc)
         self.draw_content(gc)
