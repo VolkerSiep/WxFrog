@@ -18,6 +18,8 @@ class EngineMonitor(wx.Dialog):
         sizer_1 = wx.BoxSizer(wx.VERTICAL)
         style = wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL
         self.text = wx.TextCtrl(self, style=style)
+        font = wx.Font(wx.FontInfo(10).Family(wx.FONTFAMILY_TELETYPE))
+        self.text.SetFont(font)
         self.text.SetMinSize(wx.Size(400, 300))
         sizer_1.Add(self.text, 1, wx.ALL | wx.EXPAND, 3)
         self.timer = WatchTimer(self, self.CHECK_INTERVAL)

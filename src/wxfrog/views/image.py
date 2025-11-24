@@ -25,7 +25,7 @@ class SVGImageWrap(ImageWrap):
 
     @property
     def height(self):
-        return self.image.hight
+        return self.image.height
 
     @property
     def width(self):

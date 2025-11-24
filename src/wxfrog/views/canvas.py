@@ -16,6 +16,12 @@ from .auxiliary import APoint, ASize
 
 _TOOLTIP_CHECK_INTERVAL = 200  # ms
 _TOOLTIP_DURATION = 5  # times check interval -> duration after hover
+PROP_STUB = """
+  - path: []
+    uom: ""
+    pos: [{x:d}, {y:d}]
+    fmt: "{{:.2f~P}}"
+"""[1:]
 
 class Canvas(wx.ScrolledWindow):
     RESULT_VALID = 0
@@ -43,6 +49,12 @@ class Canvas(wx.ScrolledWindow):
         self.Bind(wx.EVT_PAINT, self.on_paint)
         self.Bind(wx.EVT_MOUSEWHEEL, self._on_mousewheel)
         self.Bind(wx.EVT_LEFT_DOWN, self._on_left_click)
+        self.SetBackgroundColour(wx.Colour(config["bg_color"]))
+
+        def set_size():
+            self.SetVirtualSize(self.bg_size)
+
+        wx.CallLater(50, set_size)
 
         self._tool_tip_timer = wx.Timer()
         self._tool_tip_timer.Start(_TOOLTIP_CHECK_INTERVAL)
@@ -74,6 +86,21 @@ class Canvas(wx.ScrolledWindow):
     def _on_left_click(self, event: wx.MouseEvent):
         pos = self._get_pos(event.GetPosition())
 
+        # copy parameter / property definition stub to clipboard if pressed
+        # with <ctrl>-key.
+
+        if event.ControlDown():
+            text = PROP_STUB.format(x=pos[0], y=pos[1])
+            data_obj = wx.TextDataObject(text)
+            print(text)
+
+            if wx.TheClipboard.Open():
+                wx.TheClipboard.SetData(data_obj)
+                wx.TheClipboard.Close()
+            else:
+                print("Clipboard not available!")
+            return
+
         for item in self._result_labels:
             if item["hitbox"].Contains(pos):
                 print(item["label"])
@@ -85,6 +112,7 @@ class Canvas(wx.ScrolledWindow):
         for item in self._parameter_labels:
             if item["hitbox"].Contains(pos):
                 sendMessage(SHOW_PARAMETER_IN_CANVAS, item=item)
+
 
     def _on_mousewheel(self, event: wx.MouseEvent):
         if event.ShiftDown(): # horizontal scroll
@@ -212,7 +240,7 @@ class Canvas(wx.ScrolledWindow):
                 q = values.get(item["path"])
             except KeyError:
                 return None
-            entry = {"label": item["fmt"].format(q),
+            entry = {"label": item["fmt"].format(q.to(item["uom"])),
                      "id": ".".join(item["path"])}
             entry.update(item)
             if "name" not in entry:

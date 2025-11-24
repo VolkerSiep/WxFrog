@@ -27,7 +27,9 @@ class FrogFrame(wx.Frame):
         title = f"{config['app_name']}"
         super().__init__(None, title=title,
                          size=wx.Size(*config["frame_initial_size"]))
+        sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.canvas = Canvas(self, self.config)
+        sizer.Add(self.canvas, 1, wx.EXPAND | wx.ALL, 3)
         self.run_menu_item = None
         self.case_study_menu_item = None
         self.copy_stream_table_menu_item = None
@@ -39,18 +41,19 @@ class FrogFrame(wx.Frame):
         self.case_studies = CaseStudyDialog(self)
         self._about = AboutDialog(self, config["about"], config["about_size"])
 
-        self.Centre()
+        self.SetSizerAndFit(sizer)
 
         desired_size = self.canvas.bg_size
         display = wx.Display().GetGeometry()
-        if desired_size.GetHeight() > display.GetHeight():
-            desired_size.SetHeight(display.GetHeight())
-        if desired_size.GetWidth() > display.GetWidth():
-            desired_size.SetWidth(display.GetWidth())
+        delta = 100
+        if desired_size.GetHeight() > display.GetHeight() - delta:
+            desired_size.SetHeight(display.GetHeight() - delta)
+        if desired_size.GetWidth() > display.GetWidth() - delta:
+            desired_size.SetWidth(display.GetWidth() - delta)
 
         def adjust_size():
             for _ in range(3):
-                ds = desired_size - self.canvas.GetSize()
+                ds = desired_size - self.canvas.GetClientSize()
                 self.SetSize(self.GetSize() + ds)
             self.SetMaxSize(self.GetSize())
 
