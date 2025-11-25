@@ -56,11 +56,16 @@ class MyModel(CalculationEngine):
         return {"y": Q(p2, "bar"),
                 "z": Q(43.425, "degC"),
                 "more": more,
-                "streams": {"s01": {"T": Q(20, "degC"),
-                                    "p": p1},
-                            "s02": {"T": Q(40, "degC"),
-                                    "p": p2}
-                            }
+                "streams": {
+                    "s01": {
+                        "T": Q(20, "degC"),
+                        "p": p1,
+                        "x": Q(0.7)},
+                    "s02": {
+                        "T": Q(40, "degC"),
+                        "p": p2,
+                        "x": Q(1e-5)}
+                    }
                 }
 
 

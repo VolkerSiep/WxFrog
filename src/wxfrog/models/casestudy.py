@@ -14,9 +14,7 @@ from .engine import CalculationEngine, CalculationFailed
 from .html import HtmlTable
 from .scenarios import Scenario
 from ..events import CALCULATION_FAILED, CASE_STUDY_ENDED, CASE_STUDY_PROGRESS
-
-
-Path = tuple[str, ...]
+from ..utils import Path
 
 
 @dataclass

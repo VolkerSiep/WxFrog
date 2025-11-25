@@ -62,7 +62,6 @@ class FrogFrame(wx.Frame):
 
         wx.CallLater(100, adjust_size)
 
-
     def define_menu(self):
         menu_bar = wx.MenuBar()
 
@@ -161,7 +160,8 @@ class FrogFrame(wx.Frame):
     def _on_copy_stream_table(self, event):
         table_def = self.config["tables"]
         if len(table_def) == 1:
-            sendMessage(COPY_STREAM_TABLE, name=table_def[0])
+            first = next(iter(table_def))
+            sendMessage(COPY_STREAM_TABLE, name=first)
         else:
             # TODO: simple list dialog (Combobox) to select a table to copy.
             print("Multiple stream tables not yet supported")

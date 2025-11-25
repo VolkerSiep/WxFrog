@@ -5,7 +5,7 @@ from threading import Lock
 from re import compile
 
 import wx
-from pint import UnitRegistry, Unit, DimensionalityError
+from pint import UnitRegistry, DimensionalityError
 from pint.registry import Quantity, Unit
 
 
@@ -13,6 +13,7 @@ JSONScalar = str | int | float | bool | None
 JSONType = JSONScalar | Sequence["JSONType"] | Mapping[str, "JSONType"]
 NestedStringMap = Mapping[str, Union[str, "NestedStringMap"]]
 NestedQuantityMap = Mapping[str, Union[Quantity, "NestedQualityMap"]]
+Path = tuple[str, ...]
 
 _unit_registry: Optional[UnitRegistry] = None
 

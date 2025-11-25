@@ -50,21 +50,26 @@ parameters:
     tip: An unimportant constant
 
 tables:
-  - name: Stream table
+  Stream table:
     columns:
       - label: S01
         path: ["streams", "s01"]
       - label: S02
         path: ["streams", "s02"]
-    props:
+    properties:
       - label: T
         uom: degC
         path: ["T"]
-        fmt: "{:.2f~P}"
+        fmt: "{x:.2f}"
       - label: p
         uom: bar
         path: ["p"]
-        fmt: "{:.3f~P}"
+        fmt: "{x:.1f}"
+      - label: x
+        uom: "%"
+        path: ["x"]
+        tolerance: 5e-3
+        fmt: "{x:.2f}"
 
 units:
   # all units that are predefined

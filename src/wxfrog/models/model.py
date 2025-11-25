@@ -1,14 +1,14 @@
-
 from collections.abc import Set, Collection, MutableMapping
 from threading import Thread
 from copy import deepcopy
+from math import nan
 
 from pint import DimensionalityError, DefinitionSyntaxError, UndefinedUnitError
 from pint.registry import Quantity
 from pubsub import pub
 
 from wxfrog.utils import (
-    fmt_unit, ThreadedStringIO, get_unit_registry, DataStructure)
+    fmt_unit, ThreadedStringIO, get_unit_registry, DataStructure, Path)
 from wxfrog.config import (
     Configuration, ConfigurationError, ParameterNotFound, UnitSyntaxError,
     UndefinedUnit, UnitConversionError, OutOfBounds)
@@ -18,6 +18,7 @@ from .engine import CalculationEngine, CalculationFailed
 from .casestudy import CaseStudy, ParameterSpec
 from .scenarios import (Scenario, SCENARIO_DEFAULT, SCENARIO_CURRENT,
                         SCENARIO_CONVERGED)
+from .html import HtmlTable
 
 
 class Model:
@@ -26,7 +27,7 @@ class Model:
         self._engine = engine
         self._out_stream = ThreadedStringIO()
         self._all_units = set()
-        self._scenarios = {}
+        self._scenarios : MutableMapping[str, Scenario] = {}
         self._case_study = None
         self.file_path = None
 
@@ -105,12 +106,41 @@ class Model:
         units = self.compatible_units(value)
         return { "spec": spec, "min": min_, "max": max_, "units": units}
 
-    def collect_stream_table(self, name: str):
-        # TODO: implement
-        pass
+    def collect_stream_table(self, name: str) -> str:
+        def get(d: DataStructure, p: Path, unit) -> float:
+            try:
+                return d.get(p).to(unit).m
+            except KeyError:
+                return nan
 
-    def _initialize_parameters(self, param: DataStructure
-                               ) -> Collection[ConfigurationError]:
+        data = self.scenarios[SCENARIO_CONVERGED].results
+        if data is None:
+            raise ValueError("No results available to export steam table")
+
+        definition = self._configuration["tables"][name]
+        columns, props_raw = definition["columns"], definition["properties"]
+        streams = {k: [d[k] for d in columns] for k in ["label", "path"]}
+        props = {k: [p[k] for p in props_raw]
+                 for k in ["label", "uom", "path", "fmt"]}
+        props["tolerance"] = [float(p.get("tolerance", 0)) for p in props_raw]
+        table = HtmlTable(streams["label"], props["label"])
+        table.label = name
+        table.title = "Unnamed" if self.file_path is None else self.file_path
+        table.add_row_unit_column(props["uom"])
+        table.add_column_header_row([""] * len(streams["label"]))
+        table.set_top_rect_headers([["Stream", ""], ["Property", "Unit"]])
+        for k, (t, f) in enumerate(zip(props["tolerance"], props["fmt"])):
+            table.set_threshold(k, t)
+            table.set_nan(k, "")
+            table.set_row_format(k, f)
+        # set data
+        table_data = [[get(data, s + p, u) for s in streams["path"]]
+                      for p, u in zip(props["path"], props["uom"])]
+        table.set_data(table_data)
+        return table.render()
+
+    def _initialize_parameters(
+            self, param: DataStructure) -> Collection[ConfigurationError]:
         errors = []
         qty_cls = get_unit_registry().Quantity
         for item in self._configuration["parameters"]:
