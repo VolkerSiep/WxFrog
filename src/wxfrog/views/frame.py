@@ -27,6 +27,9 @@ class FrogFrame(wx.Frame):
         title = f"{config['app_name']}"
         super().__init__(None, title=title,
                          size=wx.Size(*config["frame_initial_size"]))
+        self._icon = config.get_app_icon()
+        if self._icon is not None:
+            self.SetIcon(self._icon)
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.canvas = Canvas(self, self.config)
         sizer.Add(self.canvas, 1, wx.EXPAND | wx.ALL, 3)

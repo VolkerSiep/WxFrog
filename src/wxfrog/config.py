@@ -1,8 +1,11 @@
-from importlib.resources import as_file
+from importlib.resources import as_file, read_binary
 from importlib.resources.abc import Traversable
 from collections.abc import Sequence
+from os import unlink
 from yaml import safe_load
 from pint.registry import Quantity
+from tempfile import NamedTemporaryFile
+import wx
 
 from .views.image import SVGImageWrap, PNGImageWrap
 
@@ -26,6 +29,23 @@ class Configuration(dict):
                 elif ending == "png":
                     return PNGImageWrap(file)
         raise ValueError(f"Unsupported file format `{ending}`.")
+
+    def get_app_icon(self):
+        try:
+            name = self["app_icon"]
+        except KeyError:
+            return
+        with as_file(self.config_dir.joinpath(name)) as path:
+            with open(path, "rb") as file:
+                data = file.read()
+
+        tmp = NamedTemporaryFile(delete=False, suffix=".ico")
+        tmp.write(data)
+        tmp.close()
+        icon = wx.Icon(tmp.name, wx.BITMAP_TYPE_ICO)
+        unlink(tmp.name)
+        return icon
+
 
 class ConfigurationError:
     def __init__(self, path: Sequence[str], message: str):
