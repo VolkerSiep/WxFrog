@@ -144,7 +144,6 @@ class HtmlTable:
             _COL.format(style=style(k))
             for k in range(len(self._column_headers[0]))
         ])
-        print(cols)
         return "".join(cols)
 
     def _generate_rows(self):

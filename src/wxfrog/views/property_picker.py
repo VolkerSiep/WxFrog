@@ -82,6 +82,12 @@ class PropertyTreeListCtrl(TreeListCtrl):
             state = wx.CHK_CHECKED if selected[True] else wx.CHK_UNCHECKED
         self.CheckItem(item, state)
 
+        # update (grand-)parents
+        if item != self.GetRootItem():
+            parent = self.GetItemParent(item)
+            self._update_parent_state(parent)
+
+
 
 class PropertyPicker(wx.Dialog):
     def __init__(self, parent: wx.Window):

@@ -122,7 +122,7 @@ class Model:
                 continue
             try:
                 param.set(path, v.to(item["uom"]))
-            except (DefinitionSyntaxError, AssertionError):
+            except (DefinitionSyntaxError, AssertionError, ValueError):
                 errors.append(UnitSyntaxError(path, item["uom"]))
                 continue
             except UndefinedUnitError:

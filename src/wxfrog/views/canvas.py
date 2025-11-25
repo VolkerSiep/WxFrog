@@ -58,7 +58,11 @@ class Canvas(wx.ScrolledWindow):
 
         self._tool_tip_timer = wx.Timer()
         self._tool_tip_timer.Start(_TOOLTIP_CHECK_INTERVAL)
-        self._tool_tip_timer.Bind(wx.EVT_TIMER, self._on_check_tooltip)
+
+        def start_check_tooltips():
+            # wait for hitboxes to be initialised
+            self._tool_tip_timer.Bind(wx.EVT_TIMER, self._on_check_tooltip)
+        wx.CallLater(1000, start_check_tooltips)
 
     def _on_check_tooltip(self, event):
         def process(e):
@@ -171,7 +175,7 @@ class Canvas(wx.ScrolledWindow):
             tip = item["tip"]
         except KeyError:
             tip = f"{item['name']} [{item['uom']}]"
-
+        tip = f"{tip}\n\n{item['label']}"
         extent = gc.GetFullTextExtent(tip)
         size = ASize(int(extent[0]) + 8, int(extent[1]) + 4)
         pos -= size // 2

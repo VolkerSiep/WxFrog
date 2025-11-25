@@ -31,8 +31,10 @@ class CaseProgressDialog(wx.ProgressDialog):
 
     def _update(self, k: int):
         def do_update():
-            res, _ = self.Update(k-1, self._MSG.format(k=k, m=self._max))
-            if not res or k == self._max:
+            res = False
+            if k < self._max:
+                res, _ = self.Update(k, self._MSG.format(k=k, m=self._max))
+            if not res:
                 pub.sendMessage(CASE_STUDY_INTERRUPT)
                 self.Destroy()
         wx.CallAfter(do_update)
