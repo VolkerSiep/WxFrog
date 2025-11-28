@@ -1,5 +1,4 @@
 app_name: "WX-Frog hello-world example"
-frame_initial_size: [400, 400]
 file_ending: rec
 
 about: |
@@ -15,36 +14,32 @@ about_size: [800, 300]
 bg_picture_name: rectangle.png
 bg_picture_width: 400
 result_font_size: 15
-bg_color: white
+bg_color: "#ccccff"
 
 run_engine_on_start: yes
 
 results:
   - path: ["A"]
     uom: cm^2
-    pos: [150, 185]
+    pos: [150, 210]
     fmt: "A = {:.1f~P}"
-    tip: The surface of the rectangle
   - path: ["P"]
     uom: cm
-    pos: [150, 218]
+    pos: [150, 242]
     fmt: "P = {:.1f~P}"
-    tip: The perimeter of the rectangle
 
 parameters:
   - path: ["a"]
-    pos: [145, 65]
+    pos: [145, 26]
     uom: cm
     fmt: "a = {:.1f~P}"
     min: 0
     max: 100.0
-    tip: Length of the first edge
   - path: ["b"]
-    pos: [86, 136]
+    pos: [61, 136]
     uom: cm
     fmt: "b = {:.1f~P}"
     min: 0
     max: 100.0
-    tip: Length of the second edge
 
 units: []

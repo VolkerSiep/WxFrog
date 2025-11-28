@@ -25,8 +25,7 @@ class FrogFrame(wx.Frame):
     def __init__(self, config: Configuration, out_stream: ThreadedStringIO):
         self.config = config
         title = f"{config['app_name']}"
-        super().__init__(None, title=title,
-                         size=wx.Size(*config["frame_initial_size"]))
+        super().__init__(None, title=title)
         self._icon = config.get_app_icon()
         if self._icon is not None:
             self.SetIcon(self._icon)

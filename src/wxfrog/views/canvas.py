@@ -7,7 +7,7 @@ from pubsub.pub import sendMessage
 
 from ..config import Configuration
 from ..events import SHOW_PARAMETER_IN_CANVAS
-from ..utils import DataStructure
+from ..utils import DataStructure, fmt_unit, get_unit_registry
 from ..models.tooltip import TooltipInfo
 
 from .parameter import ParameterDialog
@@ -169,6 +169,7 @@ class Canvas(wx.ScrolledWindow):
         self._draw_tooltip(gc)
 
     def _draw_tooltip(self, gc: wx.GraphicsContext):
+        unit_cls = get_unit_registry().Unit
         tooltip = self._tooltip
         if tooltip.counter <= 0:
             return
@@ -177,7 +178,8 @@ class Canvas(wx.ScrolledWindow):
         try:
             tip = item["tip"]
         except KeyError:
-            tip = f"{item['name']} [{item['uom']}]"
+            uom = fmt_unit(unit_cls(item["uom"]))
+            tip = f"{item['name']} [{uom}]"
         tip = f"{tip}\n\n{item['label']}"
         extent = gc.GetFullTextExtent(tip)
         size = ASize(int(extent[0]) + 8, int(extent[1]) + 4)

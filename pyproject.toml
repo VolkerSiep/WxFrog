@@ -29,6 +29,10 @@ dependencies = [
     "Pypubsub"
 ]
 
+[project.gui-scripts]
+wxfrog_hello_world = "wxfrog.examples.hello_world.gui:main"
+wxfrog_advanced = "wxfrog.examples.advanced.gui:main"
+
 [project.optional-dependencies]
 doc = [
     "Sphinx",

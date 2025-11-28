@@ -3,7 +3,8 @@ from time import sleep
 from sys import stdout
 from pint import UnitRegistry
 
-from wxfrog import main, CalculationEngine, CalculationFailed, set_unit_registry
+from wxfrog import (
+    start_gui, CalculationEngine, CalculationFailed, set_unit_registry)
 
 my_registry = UnitRegistry()
 set_unit_registry(my_registry)
@@ -69,6 +70,10 @@ class MyModel(CalculationEngine):
                 }
 
 
-if __name__ == '__main__':
+def main():
     model = MyModel()
-    main(files("src.examples.advanced.data"), model)
+    start_gui(files("wxfrog.examples.advanced.data"), model)
+
+if __name__ == '__main__':
+    main()
+

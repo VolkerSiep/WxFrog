@@ -9,7 +9,6 @@ class CalculationFailed(ValueError):
     pass
 
 class CalculationEngine(ABC):
-    @abstractmethod
     def initialise(self, out_stream: TextIOBase):
         """This method is called initially to give the engine the opportunity
         to initialise itself.
@@ -20,7 +19,7 @@ class CalculationEngine(ABC):
         :param out_stream: A thread-safe variant of a stream to receive output
           that will be displayed in the engine monitor.
         """
-        ...
+        pass
 
     def get_internal_state(self) -> JSONType:
         """The engine might have an internal state that is worth keeping track

@@ -9,7 +9,8 @@ from wxfrog.models.casestudy import ParameterSpec
 from wxfrog.events import (
     CASE_STUDY_PARAMETER_SELECTED, CASE_STUDY_LIST_CHANGED,
     CASE_STUDY_NUMBER_CHANGED, NEW_UNIT_DEFINED, CASE_STUDY_RUN,
-    CASE_STUDY_PROGRESS, CASE_STUDY_INTERRUPT, CASE_STUDY_PROPERTIES_SELECTED)
+    CASE_STUDY_PROGRESS, CASE_STUDY_INTERRUPT, CASE_STUDY_PROPERTIES_SELECTED,
+    CASE_STUDY_ENDED)
 from .auxiliary import PopupBase
 from .quantity_control import (
     QuantityCtrl, QuantityChangedEvent, EVT_QUANTITY_CHANGED, EVT_UNIT_DEFINED)
@@ -28,6 +29,12 @@ class CaseProgressDialog(wx.ProgressDialog):
             maximum=maximum, parent=parent, style=style)
         self._max = maximum
         pub.subscribe(self._update, CASE_STUDY_PROGRESS)
+        pub.subscribe(self._destroy, CASE_STUDY_ENDED)
+
+    def _destroy(self):
+        pub.unsubscribe(self._update, CASE_STUDY_PROGRESS)
+        pub.unsubscribe(self._destroy, CASE_STUDY_ENDED)
+        self.Destroy()
 
     def _update(self, k: int):
         def do_update():
@@ -36,7 +43,7 @@ class CaseProgressDialog(wx.ProgressDialog):
                 res, _ = self.Update(k, self._MSG.format(k=k, m=self._max))
             if not res:
                 pub.sendMessage(CASE_STUDY_INTERRUPT)
-                self.Destroy()
+                self._destroy()
         wx.CallAfter(do_update)
 
 

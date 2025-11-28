@@ -2,6 +2,7 @@ from typing import Optional
 from collections.abc import Sequence
 from dataclasses import dataclass, KW_ONLY, field
 from threading import Thread, Lock
+from time import sleep
 from itertools import product
 from copy import deepcopy
 from math import log, ceil
@@ -173,6 +174,10 @@ class CaseStudy:
                     break
 
             # send event of case study ended
+            # if calculation was very fast, progress popup has not even
+            # subscribed to events yet and will just hang, waiting for it.
+            # waiting 200 ms prevents this with margin
+            sleep(0.2)
             pub.sendMessage(CASE_STUDY_ENDED)
 
         self._interrupt = False
