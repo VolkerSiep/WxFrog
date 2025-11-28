@@ -32,6 +32,7 @@ dependencies = [
 [project.optional-dependencies]
 doc = [
     "Sphinx",
+    "docutils",
     "sphinxcontrib-bibtex",
     "sphinx-copybutton",
 ]
@@ -48,6 +49,7 @@ dev = [
     "build",
     "twine",
     "Sphinx",
+    "docutils",
     "sphinxcontrib-bibtex",
     "sphinx-copybutton",
 ]

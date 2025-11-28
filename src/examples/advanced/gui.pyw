@@ -71,4 +71,4 @@ class MyModel(CalculationEngine):
 
 if __name__ == '__main__':
     model = MyModel()
-    main(files("src.wxfrog_example.data"), model)
+    main(files("src.examples.advanced.data"), model)

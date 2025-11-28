@@ -83,9 +83,12 @@ class Canvas(wx.ScrolledWindow):
         pos = self.ScreenToClient(wx.GetMousePosition())
         pos_canvas = self._get_pos(pos)
         for item in self._result_labels + self._parameter_labels:
-            if item["hitbox"].Contains(pos_canvas):
-                process(item)
-                return
+            try:
+                if item["hitbox"].Contains(pos_canvas):
+                    process(item)
+                    return
+            except KeyError:
+                pass
 
     def _on_left_click(self, event: wx.MouseEvent):
         pos = self._get_pos(event.GetPosition())

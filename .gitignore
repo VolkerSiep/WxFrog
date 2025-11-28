@@ -1,6 +1,7 @@
 .idea/
 sandbox
-
+doc/build/
+testing/table.html
 __pycache__
 *.egg-info
 
