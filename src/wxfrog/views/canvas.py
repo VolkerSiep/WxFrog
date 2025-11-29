@@ -157,7 +157,7 @@ class Canvas(wx.ScrolledWindow):
 
         # draw calculated properties
         font = wx.Font(
-            self.config["result_font_size"], wx.FONTFAMILY_DEFAULT,
+            self.config["font_size"], wx.FONTFAMILY_DEFAULT,
             wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False)
         color = {self.RESULT_INVALID: LIGHT_GREY,
                  self.RESULT_VALID: BLACK,
@@ -202,7 +202,7 @@ class Canvas(wx.ScrolledWindow):
         gc.SetBrush(wx.Brush(LIGHT_GREY))
         gc.DrawRoundedRectangle(pos[0], pos[1], size[0], size[1], 4)
         font = wx.Font(
-            self.config["result_font_size"], wx.FONTFAMILY_DEFAULT,
+            self.config["font_size"], wx.FONTFAMILY_DEFAULT,
             wx.FONTSTYLE_SLANT, wx.FONTWEIGHT_NORMAL, False)
         gc.SetFont(font, INPUT_BLUE)
         gc.DrawText(tip, pos[0] + 4, pos[1] + 2)

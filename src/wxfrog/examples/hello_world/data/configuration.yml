@@ -13,20 +13,10 @@ about_size: [800, 300]
 
 bg_picture_name: rectangle.png
 bg_picture_width: 400
-result_font_size: 15
-bg_color: "#ccccff"
+font_size: 15
+bg_color: green yellow
 
 run_engine_on_start: yes
-
-results:
-  - path: ["A"]
-    uom: cm^2
-    pos: [150, 210]
-    fmt: "A = {:.1f~P}"
-  - path: ["P"]
-    uom: cm
-    pos: [150, 242]
-    fmt: "P = {:.1f~P}"
 
 parameters:
   - path: ["a"]
@@ -42,4 +32,16 @@ parameters:
     min: 0
     max: 100.0
 
-units: []
+results:
+  - path: ["A"]
+    uom: cm^2
+    pos: [150, 210]
+    fmt: "A = {:.1f~P}"
+  - path: ["P"]
+    uom: cm
+    pos: [150, 242]
+    fmt: "P = {:.1f~P}"
+
+units:
+  - inch
+  - mm

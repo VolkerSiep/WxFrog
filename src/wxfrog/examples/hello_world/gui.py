@@ -14,7 +14,10 @@ class MyModel(CalculationEngine):
 
 
 def main():
-    start_gui(files("wxfrog.examples.hello_world.data"), MyModel())
+    start_gui(
+        files("wxfrog.examples.hello_world.data"),
+        MyModel()
+    )
 
 if __name__ == '__main__':
     main()

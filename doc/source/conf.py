@@ -35,6 +35,8 @@ extensions = [
 
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),
+    'pint': ('https://pint.readthedocs.io/en/stable/', None),
+    'wxpython': ('https://docs.wxpython.org/', None)
 }
 
 # autoclass_content = 'both'
