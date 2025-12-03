@@ -85,6 +85,8 @@ The missing part is the configuration of the application itself, given as follow
 
 .. note:: Additionally, one can write any compatible unit into the combo-box of a quantity dialog. This will be accepted and then also added to the available units for that physical dimension.
 
+Now you may wonder what comes out on the other end. This will be explained in the next chapter, also representing the end user manual.
+
 
 
 

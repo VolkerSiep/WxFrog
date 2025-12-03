@@ -24,5 +24,6 @@ Content
    :maxdepth: 2
 
    introduction
-
+   manual
+   configuration
 
