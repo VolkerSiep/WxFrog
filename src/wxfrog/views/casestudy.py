@@ -21,12 +21,12 @@ from ..utils import DataStructure
 class CaseProgressDialog(wx.ProgressDialog):
     _MSG = "Cases processed: {k}/{m}"
 
-    def __init__(self, parent: wx.Window, maximum: int):
-        style = (wx.PD_APP_MODAL | wx.PD_CAN_ABORT | wx.PD_ELAPSED_TIME |
+    def __init__(self, maximum: int):
+        style = (wx.PD_CAN_ABORT | wx.PD_ELAPSED_TIME |
                  wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME | wx.PD_AUTO_HIDE)
         super().__init__(
             "Case study progress", self._MSG.format(k=0, m=maximum),
-            maximum=maximum, parent=parent, style=style)
+            maximum=maximum, parent=None, style=style)
         self._max = maximum
         pub.subscribe(self._update, CASE_STUDY_PROGRESS)
         pub.subscribe(self._destroy, CASE_STUDY_ENDED)
@@ -393,7 +393,7 @@ class CaseStudyDialog(wx.Dialog):
     def _on_run(self, event):
         specs = [p["spec"] for p in self.list_ctrl.parameters]
         pub.sendMessage(CASE_STUDY_RUN, specs=specs)
-        self._progress = CaseProgressDialog(self, self.list_ctrl.total_number)
+        self._progress = CaseProgressDialog(self.list_ctrl.total_number)
 
     def _on_total_number_changed(self, number):
         num_fmt = "-" if number < 0 else str(number)

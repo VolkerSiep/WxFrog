@@ -45,7 +45,7 @@ class FrogFrame(wx.Frame):
 
         self.SetSizerAndFit(sizer)
 
-        desired_size = self.canvas.bg_size
+        desired_size = wx.Size(self.canvas.bg_size)  # make a copy
         display = wx.Display().GetGeometry()
         delta = 100
         if desired_size.GetHeight() > display.GetHeight() - delta:
@@ -65,32 +65,32 @@ class FrogFrame(wx.Frame):
         menu_bar = wx.MenuBar()
 
         file_menu = wx.Menu()
-        item = file_menu.Append(wx.ID_ANY, "&Open\tCTRL+o", "Open file")
+        item = file_menu.Append(wx.ID_ANY, "&Open\tCTRL+O", "Open file")
         self.Bind(wx.EVT_MENU, lambda e: sendMessage(OPEN_FILE), item)
-        item = file_menu.Append(wx.ID_ANY, "&Save\tCTRL+s", "Save file")
+        item = file_menu.Append(wx.ID_ANY, "&Save\tCTRL+S", "Save file")
         self.Bind(wx.EVT_MENU, lambda e: sendMessage(SAFE_FILE), item)
-        item = file_menu.Append(wx.ID_ANY, "Save &As ...\tCTRL+w",
+        item = file_menu.Append(wx.ID_ANY, "Save &As ...\tCTRL+W",
                                 "Save file with another name")
         self.Bind(wx.EVT_MENU, lambda e: sendMessage(SAFE_FILE_AS), item)
-        item = file_menu.Append(wx.ID_ANY, "&Export canvas ...\tCTRL+g",
+        item = file_menu.Append(wx.ID_ANY, "&Export canvas ...\tCTRL+G",
                                 "Export canvas as png")
         self.Bind(wx.EVT_MENU, lambda e: sendMessage(EXPORT_CANVAS_GFX), item)
-        item = file_menu.Append(wx.ID_ANY, "&Copy stream table\tCTRL+t",
+        item = file_menu.Append(wx.ID_ANY, "&Copy stream table\tCTRL+T",
                                 "Copy stream table to clipboard (for Excel)")
         self.Bind(wx.EVT_MENU, self._on_copy_stream_table, item)
         item.Enable(False)
         self.copy_stream_table_menu_item = item
-        item = file_menu.Append(wx.ID_ANY, "E&xit\tCTRL+x", "Exit simulator")
+        item = file_menu.Append(wx.ID_ANY, "E&xit\tCTRL+X", "Exit simulator")
         self.Bind(wx.EVT_MENU, lambda e: self.Close(), item)
         menu_bar.Append(file_menu, "&File")
 
         engine_menu = wx.Menu()
-        item = engine_menu.Append(wx.ID_ANY, "&Run model\tCTRL+e",
+        item = engine_menu.Append(wx.ID_ANY, "&Run model\tCTRL+R",
                                   "Run model in background")
         self.Bind(wx.EVT_MENU, lambda e: sendMessage(RUN_MODEL), item)
         item.Enable(False)
         self.run_menu_item = item
-        item = engine_menu.Append(wx.ID_ANY, "&Case study ...\tCTRL+c",
+        item = engine_menu.Append(wx.ID_ANY, "&Case study ...\tCTRL+C",
                                  "Run case study")
         item.Enable(False)
         self.case_study_menu_item = item
@@ -98,13 +98,13 @@ class FrogFrame(wx.Frame):
         menu_bar.Append(engine_menu, "&Engine")
 
         view_menu = wx.Menu()
-        item = view_menu.Append(wx.ID_ANY, "&Monitor\tCTRL+e",
+        item = view_menu.Append(wx.ID_ANY, "&Monitor\tCTRL+E",
                                   "Show engine monitor")
         self.Bind(wx.EVT_MENU, lambda e: self.monitor.Show(), item)
-        item = view_menu.Append(wx.ID_ANY, "&Scenarios\tCTRL+m",
+        item = view_menu.Append(wx.ID_ANY, "&Scenarios\tCTRL+M",
                                  "Manage Scenarios")
         self.Bind(wx.EVT_MENU, lambda e: sendMessage(OPEN_SCENARIOS), item)
-        item = view_menu.Append(wx.ID_ANY, "&All Results\tCTRL+a",
+        item = view_menu.Append(wx.ID_ANY, "&All Results\tCTRL+A",
                                  "Show results")
         self.Bind(wx.EVT_MENU, lambda e: sendMessage(OPEN_RESULTS), item)
         menu_bar.Append(view_menu, "&View")

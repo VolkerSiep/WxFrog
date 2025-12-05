@@ -37,20 +37,30 @@ class Canvas(wx.ScrolledWindow):
         self._dirty_parameter_ids = set()
         self._tooltip = TooltipInfo()
 
-        # configure bg picture and adapt virtual size
+        # configure bg picture
         self.background = config.get_image(config["bg_picture_name"])
-        w_tg = config["bg_picture_width"]
-        w, h = w_tg, self.background.height * w_tg / self.background.width
-        self.bg_size = wx.Size(int(w), int(h))
-        self.SetVirtualSize(self.bg_size)
-        self.SetBackgroundStyle(wx.BG_STYLE_PAINT)
+        self.bg_size = config.get_image_size(self.background)
+        print(self.bg_size)
+
+        panel = wx.Panel(self)
+        panel.SetSize(self.bg_size)
+        panel.SetMinSize(self.bg_size)
+        panel.SetMaxSize(self.bg_size)
+        panel.SetBackgroundStyle(wx.BG_STYLE_PAINT)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.Add(panel, 1, wx.EXPAND, 0)
+        self.SetSizer(sizer)
+        self.panel = panel
 
         self.SetScrollRate(50, 50)
 
-        self.Bind(wx.EVT_PAINT, self.on_paint)
-        self.Bind(wx.EVT_MOUSEWHEEL, self._on_mousewheel)
-        self.Bind(wx.EVT_LEFT_DOWN, self._on_left_click)
+        panel.Bind(wx.EVT_PAINT, self._on_paint)
+        self.Bind(wx.EVT_SCROLLWIN, self._on_scroll)
+        self.Bind(wx.EVT_SCROLL_THUMBRELEASE, self._on_scroll)
+        self.Bind(wx.EVT_SCROLL_CHANGED, self._on_scroll)
 
+        self.Bind(wx.EVT_MOUSEWHEEL, self._on_mousewheel)
+        panel.Bind(wx.EVT_LEFT_DOWN, self._on_left_click)
         def set_size():
             self.SetVirtualSize(self.bg_size)
 
@@ -59,10 +69,20 @@ class Canvas(wx.ScrolledWindow):
         self._tool_tip_timer = wx.Timer()
         self._tool_tip_timer.Start(_TOOLTIP_CHECK_INTERVAL)
 
-        def start_check_tooltips():
-            # wait for hitboxes to be initialised
-            self._tool_tip_timer.Bind(wx.EVT_TIMER, self._on_check_tooltip)
-        wx.CallLater(1000, start_check_tooltips)
+        parent.Bind(wx.EVT_CLOSE, self._on_close)
+        self._tool_tip_timer.Bind(wx.EVT_TIMER, self._on_check_tooltip)
+
+    def _on_scroll(self, event):
+        self.panel.Update()
+        self.panel.Refresh()
+        self.Refresh()
+        event.Skip()
+
+    def _on_close(self, event):
+        # stop timer, or else it can still fire an event and trigger access
+        # to destroyed canvas object
+        self._tool_tip_timer.Stop()
+        event.Skip()
 
     def _on_check_tooltip(self, event):
         def process(e):
@@ -89,9 +109,11 @@ class Canvas(wx.ScrolledWindow):
                     return
             except KeyError:
                 pass
+        # self.panel.Refresh(False)
+        # self.panel.Update()
 
     def _on_left_click(self, event: wx.MouseEvent):
-        pos = self._get_pos(event.GetPosition())
+        pos = event.GetPosition()
 
         # copy parameter / property definition stub to clipboard if pressed
         # with <ctrl>-key.
@@ -151,7 +173,7 @@ class Canvas(wx.ScrolledWindow):
         bg = wx.Colour(self.config["bg_color"])
         gc.SetBrush(gc.CreateBrush(wx.Brush(bg)))
         gc.SetPen(wx.TRANSPARENT_PEN)
-        gc.DrawRectangle(0, 0, *self.GetClientSize())
+        gc.DrawRectangle(0, 0, *self.panel.GetSize())
         # load background picture
         self.background.render_to_gc(gc, size=self.bg_size)
 
@@ -207,10 +229,9 @@ class Canvas(wx.ScrolledWindow):
         gc.SetFont(font, INPUT_BLUE)
         gc.DrawText(tip, pos[0] + 4, pos[1] + 2)
 
-    def on_paint(self, event):
-        # dc = wx.PaintDC(self)
-        dc = wx.AutoBufferedPaintDC(self)
-        self.PrepareDC(dc)
+    def _on_paint(self, event):
+        dc = wx.AutoBufferedPaintDC(self.panel)
+        dc.Clear()
         gc = wx.GraphicsContext.Create(dc)
         self.draw_content(gc)
 
@@ -224,11 +245,11 @@ class Canvas(wx.ScrolledWindow):
 
     # ---- Export method ----
     def save_as_png(self, path: str):
-        w, h = self.GetVirtualSize()
+        w, h = self.panel.GetSize()
         bmp = wx.Bitmap(w, h)
         mdc = wx.MemoryDC(bmp)
         mdc.Clear()
-        self.PrepareDC(mdc)
+        self.panel.PrepareDC(mdc)
 
         gc = wx.GraphicsContext.Create(mdc)
         self.draw_content(gc)
