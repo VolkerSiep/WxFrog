@@ -170,7 +170,7 @@ class Canvas(wx.ScrolledWindow):
                     e["hitbox"] = wx.Rect(wx.Point(*e["pos"]), size)
 
         # fill background explicitly
-        bg = wx.Colour(self.config["bg_color"])
+        bg = wx.Colour(self.config.get("bg_color", "white"))
         gc.SetBrush(gc.CreateBrush(wx.Brush(bg)))
         gc.SetPen(wx.TRANSPARENT_PEN)
         gc.DrawRectangle(0, 0, *self.panel.GetSize())
@@ -178,8 +178,9 @@ class Canvas(wx.ScrolledWindow):
         self.background.render_to_gc(gc, size=self.bg_size)
 
         # draw calculated properties
+        font_size = self.config.get("font_size", 12)
         font = wx.Font(
-            self.config["font_size"], wx.FONTFAMILY_DEFAULT,
+            font_size, wx.FONTFAMILY_DEFAULT,
             wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False)
         color = {self.RESULT_INVALID: LIGHT_GREY,
                  self.RESULT_VALID: BLACK,
@@ -223,8 +224,9 @@ class Canvas(wx.ScrolledWindow):
         gc.SetPen(wx.Pen(INPUT_BLUE))
         gc.SetBrush(wx.Brush(LIGHT_GREY))
         gc.DrawRoundedRectangle(pos[0], pos[1], size[0], size[1], 4)
+        font_size = self.config.get("font_size", 12)
         font = wx.Font(
-            self.config["font_size"], wx.FONTFAMILY_DEFAULT,
+            font_size, wx.FONTFAMILY_DEFAULT,
             wx.FONTSTYLE_SLANT, wx.FONTWEIGHT_NORMAL, False)
         gc.SetFont(font, INPUT_BLUE)
         gc.DrawText(tip, pos[0] + 4, pos[1] + 2)

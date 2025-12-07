@@ -37,17 +37,17 @@ class Configuration(dict):
         If one of these is defined, scale the other to match the aspect ratio.
         If both are defined, return the specified dimensions directly.
         """
-        w_tg = self.get("bg_picture_width", None)
-        h_tg = self.get("bg_picture_height", None)
+        w_tg = self.get("bg_picture_width", -1)
+        h_tg = self.get("bg_picture_height", -1)
         w, h = image.width, image.height
-        if w_tg is not None and h_tg is not None:
+        if w_tg > 0 and h_tg > 0:
             return wx.Size(w_tg, h_tg)
-        if w_tg is None and h_tg is None:
+        if w_tg <= 0 and h_tg <= 0:
             return wx.Size(w, h)
-        if w_tg is None:
-            return wx.Size(w * h_tg / h, h_tg)
+        if w_tg <= 0:
+            return wx.Size(int(w * h_tg / h), h_tg)
         else:
-            return wx.Size(w_tg, h * w_tg / w)
+            return wx.Size(w_tg, int(h * w_tg / w))
 
     def get_app_icon(self):
         try:

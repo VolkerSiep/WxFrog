@@ -120,7 +120,7 @@ class Controller:
         self.frame.case_studies.allow_run(True)
         self.frame.run_menu_item.Enable()
         self.frame.case_study_menu_item.Enable()
-        if self.configuration["run_engine_on_start"]:
+        if self.configuration.get("run_engine_on_start", False):
             self._on_model_run()
 
     def _on_open_results(self):

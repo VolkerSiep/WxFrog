@@ -15,11 +15,28 @@ NewUnitDefinedEvent, EVT_UNIT_DEFINED = NewCommandEvent()
 
 
 class QuantityChangedEvent(_QuantityChangedEventBase):
-    def __init__(self, parent, value, in_bounds):
+    MAGNITUDE = 0
+    UNIT = 1
+    ENTER = 2
+    FOCUS_LOST = 4
+
+    def __init__(self, parent, value, in_bounds, base_type, evt_type):
         super().__init__(id=parent.GetId())
         self.SetEventObject(parent)
         self.new_value = value
         self.in_bounds = in_bounds
+
+        self.type = base_type
+        if evt_type == wx.EVT_TEXT_ENTER.typeId:
+            self.type |= QuantityChangedEvent.ENTER
+        elif evt_type == wx.EVT_KILL_FOCUS.typeId:
+            self.type |= QuantityChangedEvent.FOCUS_LOST
+
+    def enter_pressed(self):
+        return bool(self.type & self.ENTER)
+
+    def focus_lost(self):
+        return bool(self.type & self.FOCUS_LOST)
 
 
 class QuantityCtrl(wx.Window):
@@ -69,9 +86,9 @@ class QuantityCtrl(wx.Window):
         self.unit_ctrl.Bind(wx.EVT_TEXT_ENTER, self._on_unit_changed)
         self.unit_ctrl.Bind(wx.EVT_COMBOBOX, self._on_unit_changed)
         self.magnitude_ctrl.Bind(wx.EVT_TEXT_ENTER, self._on_magnitude_changed)
+        self.magnitude_ctrl.Bind(wx.EVT_KILL_FOCUS, self._on_magnitude_changed)
 
     def _on_unit_changed(self, event):
-        orig_bg = self.unit_ctrl.GetBackgroundColour()
         def show_error(message):
             self.status.SetLabelText(message)
             self.status.SetForegroundColour(ERROR_RED)
@@ -84,6 +101,7 @@ class QuantityCtrl(wx.Window):
             self.status.SetLabelText("You can do this!")
             self.status.SetForegroundColour(LIGHT_GREY)
 
+        orig_bg = self.unit_ctrl.GetBackgroundColour()
         candidate = event.GetString()
         try:
             new_value = self.value.to(candidate)
@@ -117,10 +135,9 @@ class QuantityCtrl(wx.Window):
             qty_cls = get_unit_registry().Quantity
             self.value = qty_cls(self.value.m, cand_fmt)
 
-        self._fire_change_event()
+        self._fire_change_event(QuantityChangedEvent.UNIT, event.GetEventType())
 
     def _on_magnitude_changed(self, event):
-        orig_bg = self.magnitude_ctrl.GetBackgroundColour()
         def show_error(message):
             self.status.SetLabelText(message)
             self.status.SetForegroundColour(ERROR_RED)
@@ -133,6 +150,7 @@ class QuantityCtrl(wx.Window):
             self.status.SetForegroundColour(LIGHT_GREY)
             self.status.SetLabelText("You can do this!")
 
+        orig_bg = self.magnitude_ctrl.GetBackgroundColour()
         try:
             new_value = float(self.magnitude_ctrl.GetValue())
         except ValueError:
@@ -141,10 +159,12 @@ class QuantityCtrl(wx.Window):
 
         qty_cls = get_unit_registry().Quantity
         self.value = qty_cls(new_value, self.value.u)
-        self._fire_change_event()
+        self._fire_change_event(QuantityChangedEvent.MAGNITUDE,
+                                event.GetEventType())
 
-    def _fire_change_event(self):
-        evt = QuantityChangedEvent(self, self.value, self._check_bounds())
+    def _fire_change_event(self, base_type, evt_type):
+        evt = QuantityChangedEvent(
+            self, self.value, self._check_bounds(), base_type, evt_type)
         wx.PostEvent(self, evt)
 
     def _check_bounds(self) -> bool:

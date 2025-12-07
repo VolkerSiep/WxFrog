@@ -45,7 +45,7 @@ class Model:
         snc[SCENARIO_CURRENT] = deepcopy(snc[SCENARIO_DEFAULT])
         u_cls = get_unit_registry().Unit
         self._all_units = {fmt_unit(u_cls(u))
-                           for u in self._configuration["units"]}
+                           for u in self._configuration.get("units", [])}
         errors = self._initialize_parameters(default_params)
         for r in self._configuration["results"]:
             self._all_units.add(fmt_unit(u_cls(r["uom"])))

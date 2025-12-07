@@ -41,7 +41,9 @@ class FrogFrame(wx.Frame):
         self.scenarios = ScenarioManager(self)
         self.results = ResultView(self)
         self.case_studies = CaseStudyDialog(self)
-        self._about = AboutDialog(self, config["about"], config["about_size"])
+        about_text = config.get("about", f"<h3>{config['app_name']}</h3>")
+        about_size = config.get("about_size", (400, 200))
+        self._about = AboutDialog(self, about_text, about_size)
 
         self.SetSizerAndFit(sizer)
 
@@ -157,10 +159,14 @@ class FrogFrame(wx.Frame):
         cs.Show()
 
     def _on_copy_stream_table(self, event):
-        table_def = self.config["tables"]
-        if len(table_def) == 1:
-            first = next(iter(table_def))
-            sendMessage(COPY_STREAM_TABLE, name=first)
-        else:
-            # TODO: simple list dialog (Combobox) to select a table to copy.
-            print("Multiple stream tables not yet supported")
+        table_def = self.config.get("tables", {})
+        match len(table_def):
+            case 0:
+                wx.MessageBox("No stream table defined", "Export stream table",
+                              wx.ICON_WARNING | wx.CANCEL)
+            case 1:
+                first = next(iter(table_def))
+                sendMessage(COPY_STREAM_TABLE, name=first)
+            case _:
+                # TODO: simple list dialog (Combobox) to select a table to copy.
+                print("Multiple stream tables are not yet supported")

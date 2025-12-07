@@ -209,7 +209,7 @@ class ParameterListCtrl(wx.ListCtrl):
                 spec.path, event.new_value, spec.max, name = spec.name,
                 num=num, incr=incr, log=spec.log)
             self.update(item)
-            return True
+            return event.enter_pressed()
 
         info = self.parameters[item]
         spec = info["spec"]
@@ -231,7 +231,7 @@ class ParameterListCtrl(wx.ListCtrl):
                 spec.path, spec.min, event.new_value, name = spec.name,
                 num=num, incr=incr, log=spec.log)
             self.update(item)
-            return True
+            return event.enter_pressed()
 
         info = self.parameters[item]
         spec = info["spec"]
@@ -246,7 +246,7 @@ class ParameterListCtrl(wx.ListCtrl):
                 spec.path, spec.min, spec.max, name=spec.name,
                 incr=incr, log=spec.log)
             self.update(item)
-            return True
+            return event.enter_pressed()
 
         def commit_factor(factor):
             info["spec"] = ParameterSpec(
