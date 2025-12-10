@@ -40,7 +40,6 @@ class Canvas(wx.ScrolledWindow):
         # configure bg picture
         self.background = config.get_image(config["bg_picture_name"])
         self.bg_size = config.get_image_size(self.background)
-        print(self.bg_size)
 
         panel = wx.Panel(self)
         panel.SetSize(self.bg_size)

@@ -17,6 +17,7 @@ from wxfrog.models.scenarios import SCENARIO_CURRENT, SCENARIO_CONVERGED
 class Controller:
     def __init__(self, config_directory: Traversable, model: CalculationEngine):
         self.configuration = Configuration(config_directory)
+        self._running = True  # initially busy with initialization
 
         # event subscriptions
         events = {
@@ -67,6 +68,7 @@ class Controller:
         self.frame.run_menu_item.Enable(False)
         self.frame.case_study_menu_item.Enable(False)
         self.frame.case_studies.allow_run(False)
+        self._running = True
 
     def _on_interrupt_case_study(self):
         self.model.interrupt_case_study()
@@ -75,6 +77,7 @@ class Controller:
         self.frame.run_menu_item.Enable(True)
         self.frame.case_study_menu_item.Enable(True)
         self.frame.case_studies.allow_run(True)
+        self._running = False
 
     def _on_case_study_properties_selected(self, paths):
         html = self.model.collect_case_study_results(paths)
@@ -92,6 +95,7 @@ class Controller:
         self.frame.case_study_menu_item.Enable(False)
         self.frame.case_studies.allow_run(False)
         self.frame.copy_stream_table_menu_item.Enable(False)
+        self._running = True
 
     def _on_calculation_done(self):
         # if parameters of converged are still the same as current, copy them.
@@ -104,12 +108,14 @@ class Controller:
         self.frame.case_study_menu_item.Enable()
         self.frame.case_studies.allow_run(True)
         self.frame.copy_stream_table_menu_item.Enable()
+        self._running = False
 
     def _on_calculation_failed(self, message):
         self.frame.show_calculation_error(message)
         self.frame.run_menu_item.Enable()
         self.frame.case_study_menu_item.Enable()
         self.frame.case_studies.allow_run(True)
+        self._running = False
 
     def _on_initialisation_done(self):
         errors = self.model.finalize_initialisation()
@@ -120,6 +126,7 @@ class Controller:
         self.frame.case_studies.allow_run(True)
         self.frame.run_menu_item.Enable()
         self.frame.case_study_menu_item.Enable()
+        self._running = False
         if self.configuration.get("run_engine_on_start", False):
             self._on_model_run()
 
@@ -183,9 +190,13 @@ class Controller:
         value = param.get(item["path"])
         units = self.model.compatible_units(value)
         new_value = self.frame.canvas.show_parameter_dialog(item, value, units)
-        if new_value is not None and new_value != value:
-            scn_current.set_param(item["path"], new_value)
-            self.frame.canvas.update_parameters(param)
+        if new_value is None or new_value == value:
+            return
+        scn_current.set_param(item["path"], new_value)
+        self.frame.canvas.update_parameters(param)
+        if (self.configuration.get("run_engine_on_change", False)
+                and not self._running):
+            self._on_model_run()
 
     def _on_new_unit_defined(self, unit: str):
         self.model.register_unit(unit)
