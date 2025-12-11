@@ -202,7 +202,7 @@ class Canvas(wx.ScrolledWindow):
         except KeyError:
             uom = fmt_unit(unit_cls(item["uom"]))
             tip = f"{item['name']} [{uom}]"
-        tip = f"{tip}\n\n{item['label']}"
+        tip = f"{tip}\n{item['label']}"
         extent = gc.GetFullTextExtent(tip)
         size = ASize(int(extent[0]) + 8, int(extent[1]) + 4)
         pos -= size // 2

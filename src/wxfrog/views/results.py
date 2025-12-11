@@ -310,9 +310,9 @@ class ResultView(wx.Frame):
 
         self.SetMenuBar(menu_bar)
         self.Bind(wx.EVT_CLOSE, lambda e: self.Show(False))
-        for e in (wx.EVT_SEARCH, wx.EVT_SEARCH_CANCEL,
-                  wx.EVT_KILL_FOCUS, wx.EVT_TEXT_ENTER):
-            self.search.Bind(e, self._on_search)
+        # for e in (wx.EVT_SEARCH, wx.EVT_SEARCH_CANCEL,
+        #           wx.EVT_KILL_FOCUS, wx.EVT_TEXT_ENTER):
+        self.search.Bind(wx.EVT_SEARCH, self._on_search)
 
     def _on_search(self, event):
         self.view_ctrl.on_search(self.search.GetValue())

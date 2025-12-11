@@ -91,7 +91,8 @@ class PropertyTreeListCtrl(TreeListCtrl):
 
 class PropertyPicker(wx.Dialog):
     def __init__(self, parent: wx.Window):
-        super().__init__(parent, title="Property selector")
+        style = wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER
+        super().__init__(parent, title="Property selector", style=style)
         sizer = wx.BoxSizer(wx.VERTICAL)
         self.ctrl = PropertyTreeListCtrl(self)
         sizer.Add(self.ctrl, 1, wx.EXPAND | wx.ALL, 3)

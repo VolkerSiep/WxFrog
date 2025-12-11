@@ -101,6 +101,7 @@ class QuantityCtrl(wx.Window):
             self.status.SetLabelText("You can do this!")
             self.status.SetForegroundColour(LIGHT_GREY)
 
+        event.Skip()
         orig_bg = self.unit_ctrl.GetBackgroundColour()
         candidate = event.GetString()
         try:
@@ -150,6 +151,7 @@ class QuantityCtrl(wx.Window):
             self.status.SetForegroundColour(LIGHT_GREY)
             self.status.SetLabelText("You can do this!")
 
+        event.Skip()
         orig_bg = self.magnitude_ctrl.GetBackgroundColour()
         try:
             new_value = float(self.magnitude_ctrl.GetValue())
