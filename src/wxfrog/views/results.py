@@ -228,7 +228,6 @@ class ResultDataViewCtrl(DataViewCtrl):
         def expand(item):
             self.model.GetChildren(item, children := [])
             for c in children:
-                # expand(item)
                 self.ExpandChildren(c)
         expand(NullDataViewItem)
 

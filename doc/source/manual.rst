@@ -46,7 +46,7 @@ View menu
 
 **Scenarios** starts the scenario manager (:ref:`see below <Scenario manager>`).
 
-**All results** shows all results of the model. These can be considerably more than those displayed in the canvas (see below).
+**All results** shows all results of the model. These can be considerably more than those displayed in the canvas (:ref:`see below <Result viewer>`).
 
 Help menu
 ---------
@@ -99,9 +99,9 @@ Case studies
 ------------
 .. image:: figures/case_study_main.png
 
-To run a case study, one or more parameters are selected using the ``+`` button. If multiple parameters have been included, the arrow buttons can be used to rearrange their sequence. Selected parameters can again be removed via the cross-button.
+To run a case study, one or more parameters are selected using the ``+`` button. If multiple parameters have been included, the arrow buttons can be used to rearrange their sequence from outer to inner dimension. Selected parameters can again be removed via the cross-button.
 
-When a parameter is inserted, the default setting is to step in 5 steps from -10 % to +10 % of the current value. This can be altered by the following ways by double-clicking on the particular cells:
+When a parameter is inserted, the default setting is to step in 5 steps from -10 % to +10 % of the current value -- moved to stay within the parameter's validity range if necessary. This can be altered by the following ways by double-clicking on the particular cells:
 
 - The **minimum and maximum values** can be changed within the validity range of the parameter at hand. If the steps are specified (default), the increment value will change according to the new interval. Otherwise the number of steps will change.
 
@@ -113,3 +113,58 @@ When a parameter is inserted, the default setting is to step in 5 steps from -10
   1   10  2         1 3 5 7 9 10
   1   10  3         1 4 7 10
   === === ========= ============
+
+- The **step** column is automatically calculated if an incremental value is provided. Likewise, when specified, it overwrites the incremental value to match the specified number of steps.
+
+- The **log** column is altered by double-clicking the cell and toggles between linear and logarithmic mode. In logarithmic mode, the increment column holds a multiplication factor of two successive runs, while it holds the incremental value in case of linear (non-logarithmic) mode.
+
+  Again, the step column can be used to adjust the factor to hold the specified number of steps.
+
+.. warning::
+
+    Entering logarithmic mode does not make any sense when the minimal and maximal values have a different sign. Such action therefore is prevented.
+
+While the parameters are specified, the total number of cases to run is displayed in the center bottom of the window. Depending on the numerical complexity of the model, this gives the user an indication of the expected runtime.
+
+The **Run** button triggers the calculation in a dedicated thread, and a progress bar will appear -- if the study is not finished before the application manages to create one. The progress bar shows the current study number as well as some time statistics:
+
+.. image:: figures/case_study_progress_bar.png
+
+Naturally, the remaining time is an estimate, typically assuming the remaining cases to consume similar time as the processed ones.
+
+The case study generates results for all available properties, and by pressing the **copy** button (left of the run button), a subset can be exported to Excel **after** the study is run.
+
+.. image:: figures/case_study_select_properties.png
+
+Once the **OK** button is pressed, the table is stored in the clipboard and can be pasted into an Excel worksheet.
+
+.. warning::
+
+    This is supposed to work also in non-Windows operative systems and with spreadsheet programs other than MS Excel, but for the time being, the table is only interpreted and rendered correctly when pasting into MS Excel.
+
+    As a workaround, the table can be pasted in an online html editor, such as on `www.w3schools.com <https://www.w3schools.com/html/html_editor.asp>`_, rendered there, and then the html table copied back into for instance Libre Office Spreadsheet.
+
+.. note::
+
+    In many cases, when observing the exported results, one realizes that it would be nice to have exported further results. In most other tools, this requires a re-run of the case study. However, in ``WxFrog``, all results are still there. A new table can be exported just by re-pressing the **copy** button.
+
+
+.. _Result viewer:
+
+Result Viewer
+-------------
+.. image:: figures/result_view.png
+
+The result viewer shows a data view of all results. Hierarchical nodes can be expanded and imploded. The values are shown with their units of measurement. These units can be changed to compatible units, including typing in new units. Right-clicking on a unit offers to apply the current unit to all results with compatible units.
+
+The **search bar** allows to search for entities. The following features allow for searching efficiently in the hierarchical data:
+
+        - ``**.T``: Matches all paths ending with an element called ``T``.
+          Here, ``**`` is a wildcard matching one or many arbitrary elements
+          of the path
+        - ``a.b.c.M``: Matches only the path as provided (no wildcards)
+        - ``Synthesis.**.x.*``: Matches all paths that start with ``Synthesis``
+          and have ``x`` as the second-last element, such as the path
+          ``Synthesis/Reactor/Outlet/x/MeOH``.
+
+Hence, a single asterisk is a place-holder for a single path element, while a double asterisk matches an arbitrary number of elements.

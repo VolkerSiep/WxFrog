@@ -21,7 +21,7 @@ The following features are **not** part of the scope:
 Content
 -------
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
 
    introduction
    manual

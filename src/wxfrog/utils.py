@@ -63,7 +63,7 @@ class ThreadedStringIO(TextIOBase):
 
 class PathFilter:
     DOUBLE_STAR = r"([^.]+(\.[^.]+)<star>)"
-    SINGLE_STAR = r"[^.]?"
+    SINGLE_STAR = r"[^.]+"
 
     def __init__(self, search_term: str):
         """Create a filter with given search term. Examples are:
@@ -79,10 +79,11 @@ class PathFilter:
         """
         if search_term:
             st = search_term.replace("\\*", "\\<star>")
-            st = search_term.replace("**", self.DOUBLE_STAR)
+            st = st.replace("**", self.DOUBLE_STAR)
             st = st.replace("*", self.SINGLE_STAR)
             st = st.replace("<star>", "*")
             self._pattern = compile(f"^{st}$")
+            print(st)
         else:
             self._pattern = None
 

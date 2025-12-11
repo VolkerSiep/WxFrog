@@ -1,5 +1,4 @@
 app_name: "WX-Frog example application"
-frame_initial_size: [1000, 700]
 file_ending: exa
 
 about: |
@@ -18,6 +17,7 @@ font_size: 15
 bg_color: white
 
 run_engine_on_start: yes
+run_engine_on_change: yes
 
 results:
   - path: ["y"]

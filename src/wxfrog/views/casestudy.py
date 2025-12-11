@@ -205,9 +205,16 @@ class ParameterListCtrl(wx.ListCtrl):
                 num = spec.num
             else:
                 incr = spec.incr
-            info["spec"] = ParameterSpec(
-                spec.path, event.new_value, spec.max, name = spec.name,
-                num=num, incr=incr, log=spec.log)
+            try:
+                info["spec"] = ParameterSpec(
+                    spec.path, event.new_value, spec.max, name=spec.name,
+                    num=num, incr=incr, log=spec.log)
+            except TypeError:
+                wx.MessageBox("Log mode not feasible for sign-shifting interval",
+                              "Error in case study",
+                              style=wx.ICON_ERROR | wx.CANCEL)
+                return False
+
             self.update(item)
             return event.enter_pressed()
 
@@ -227,9 +234,16 @@ class ParameterListCtrl(wx.ListCtrl):
                 num = spec.num
             else:
                 incr = spec.incr
-            info["spec"] = ParameterSpec(
-                spec.path, spec.min, event.new_value, name = spec.name,
-                num=num, incr=incr, log=spec.log)
+            try:
+                info["spec"] = ParameterSpec(
+                    spec.path, spec.min, event.new_value, name=spec.name,
+                    num=num, incr=incr, log=spec.log)
+            except TypeError:
+                wx.MessageBox("Log mode not feasible for sign-shifting interval",
+                              "Error in case study",
+                              style=wx.ICON_ERROR | wx.CANCEL)
+                return False
+
             self.update(item)
             return event.enter_pressed()
 
@@ -282,10 +296,16 @@ class ParameterListCtrl(wx.ListCtrl):
     def _on_toggle_log(self, item, rect):
         info = self.parameters[item]
         spec = info["spec"]
-        info["spec"] = ParameterSpec(
-            spec.path, spec.min, spec.max, name=spec.name,
-            num=spec.num, log=not spec.log)
-        self.update(item)
+        try:
+            info["spec"] = ParameterSpec(
+                spec.path, spec.min, spec.max, name=spec.name,
+                num=spec.num, log=not spec.log)
+        except TypeError:
+            wx.MessageBox("Log mode not feasible for sign-shifting interval",
+                          "Error in case study",
+                          style=wx.ICON_ERROR | wx.CANCEL)
+        else:
+            self.update(item)
 
     def _on_size(self, event):
         size = event.GetSize()
