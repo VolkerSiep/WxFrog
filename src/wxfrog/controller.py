@@ -151,6 +151,7 @@ class Controller:
         self.model.file_path = path
         self.frame.update_title(path)
         self.model.deserialize(data)
+        # TODO: set case study parameters to view
 
         self._update_parameters()
         self._update_results()

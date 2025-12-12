@@ -136,6 +136,16 @@ class CaseStudy:
         self.scenario = scenario
         self._interrupt = False
 
+    def serialize(self):
+        pass  # todo: implement
+
+    @classmethod
+    def deserialize(cls, data):
+        if data is None:
+            return None
+        return ...  # TODO: implement
+
+
     def collect(self, filename: str, paths: Sequence[Path]) -> str:
         return self.results.collect(filename, paths)
 

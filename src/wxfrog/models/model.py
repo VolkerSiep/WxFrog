@@ -182,12 +182,17 @@ class Model:
         return self._case_study.collect(self.file_path, paths)
 
     def serialize(self):
+        case_study = self._case_study
+        if case_study is not None:
+            case_study = case_study.serialize()
         return {
             "units": list(self._all_units),
-            "scenarios": {n: s.serialize() for n, s in self._scenarios.items()}
+            "scenarios": {n: s.serialize() for n, s in self._scenarios.items()},
+            "case_study": case_study
         }
 
     def deserialize(self, data):
         self._all_units = set(data["units"])
         self._scenarios = {n: Scenario.deserialize(d)
                            for n, d in data["scenarios"].items()}
+        self._case_study = CaseStudy.deserialize(data["case_study"])
