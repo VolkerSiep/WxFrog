@@ -166,10 +166,10 @@ class ParameterListCtrl(wx.ListCtrl):
                     wx.EVT_LIST_INSERT_ITEM, wx.EVT_LIST_ITEM_DESELECTED):
             self.Bind(evt, cb)
 
-    def set_parameters(self, specs: list[MutableMapping]):
-        self.parameters = specs
-        self.ClearAll()
-        for p in self.parameters:
+    def set_parameters(self, param: list[MutableMapping]):
+        self.parameters = []
+        self.DeleteAllItems()
+        for p in param:
             self.add(p)
 
     def get_parameters(self) -> list[MutableMapping]:

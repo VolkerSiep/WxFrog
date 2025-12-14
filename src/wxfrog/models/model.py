@@ -170,9 +170,10 @@ class Model:
             self._all_units.add(fmt_unit(v.u))
         return errors
 
-    def define_case_study(self):
+    def assure_case_study(self):
         scn = self._scenarios[SCENARIO_CONVERGED]
-        self._case_study = CaseStudy(self._engine, scn, self._out_stream)
+        if self._case_study is None:
+            self._case_study = CaseStudy(self._engine, scn, self._out_stream)
         return self._case_study
 
     def interrupt_case_study(self):
@@ -181,10 +182,10 @@ class Model:
     def collect_case_study_results(self, paths):
         return self._case_study.collect(self.file_path, paths)
 
-    def serialize(self):
+    def serialize(self, case_study_param):
         case_study = self._case_study
         if case_study is not None:
-            case_study = case_study.serialize()
+            case_study = case_study.serialize(case_study_param)
         return {
             "units": list(self._all_units),
             "scenarios": {n: s.serialize() for n, s in self._scenarios.items()},
@@ -195,4 +196,7 @@ class Model:
         self._all_units = set(data["units"])
         self._scenarios = {n: Scenario.deserialize(d)
                            for n, d in data["scenarios"].items()}
-        self._case_study = CaseStudy.deserialize(data["case_study"])
+        self._case_study, param = CaseStudy.deserialize(
+            self._engine, self._out_stream, data["case_study"])
+        return param
+

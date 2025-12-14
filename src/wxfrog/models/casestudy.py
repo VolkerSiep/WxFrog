@@ -10,7 +10,7 @@ from math import log, ceil
 from pubsub import pub
 from pint.registry import Quantity  # actual type
 
-from wxfrog.utils import DataStructure
+from wxfrog.utils import DataStructure, get_unit_registry
 from .engine import CalculationEngine, CalculationFailed
 from .html import HtmlTable
 from .scenarios import Scenario
@@ -55,6 +55,33 @@ class ParameterSpec:
             num = 1 + ceil(interval / incr)
         self.data = [min_ + i * incr for i in range(num - 1)] + [max_]
         self.num, self.incr = num, incr
+
+    def serialize(self):
+        return {
+            "path": self.path,
+            "min": f"{self.min:.14g~}",
+            "max": f"{self.max:.14g~}",
+            "name": self.name,
+            "num": self.num,
+            "log": self.log,
+            "incr": self.incr if self.log else f"{self.incr:.14g~}",
+            "num_spec": self.num_spec
+        }
+
+    @classmethod
+    def deserialize(cls, data):
+        qty_cls = get_unit_registry().Quantity
+        is_log = data["log"]
+        if data["num_spec"]:
+            num, incr = data["num"], None
+        else:
+            num = None
+            incr = float(data["incr"]) if is_log else qty_cls(data["incr"])
+
+        return cls(
+            tuple(data["path"]), qty_cls(data["min"]), qty_cls(data["max"]),
+            name=data["name"], log=is_log, incr=incr, num=num
+        )
 
     def _post_init_log(self):
         num, incr = self.num, self.incr
@@ -136,15 +163,38 @@ class CaseStudy:
         self.scenario = scenario
         self._interrupt = False
 
-    def serialize(self):
-        pass  # todo: implement
+    def serialize(self, parameters):
+        def serialize_param(p):
+            p = dict(p)
+            p["spec"] = p["spec"].serialize()
+            p["min"] = f"{p['min']:.14g~}"
+            p["max"] = f"{p['max']:.14g~}"
+            p["units"] = list(p["units"])
+            return p
+
+        return {
+            "scenario": self.scenario.serialize(),
+            "parameters": list(map(serialize_param, parameters))
+        }
 
     @classmethod
-    def deserialize(cls, data):
+    def deserialize(cls, engine, outstream, data):
+        def deserialize_param(p):
+            return {
+                "spec": ParameterSpec.deserialize(p["spec"]),
+                "min": qty_cls(p["min"]),
+                "max": qty_cls(p["min"]),
+                "units": set(p["units"])
+            }
+
         if data is None:
             return None
-        return ...  # TODO: implement
-
+        qty_cls = get_unit_registry().Quantity
+        scenario = Scenario.deserialize(data["scenario"])
+        result = cls(engine, scenario, outstream)
+        params = [deserialize_param(p) for p in data["parameters"]]
+        result.param_specs = [p["spec"] for p in params]
+        return result, params
 
     def collect(self, filename: str, paths: Sequence[Path]) -> str:
         return self.results.collect(filename, paths)

@@ -62,7 +62,7 @@ class Controller:
         copy_html_to_clipboard(html)
 
     def _on_case_study_run(self, specs):
-        case_study = self.model.define_case_study()
+        case_study = self.model.assure_case_study()
         case_study.set_parameters(specs)
         case_study.run()
         self.frame.run_menu_item.Enable(False)
@@ -150,8 +150,8 @@ class Controller:
                 data = load(file)
         self.model.file_path = path
         self.frame.update_title(path)
-        self.model.deserialize(data)
-        # TODO: set case study parameters to view
+        param = self.model.deserialize(data)
+        self.frame.case_studies.list_ctrl.set_parameters(param)
 
         self._update_parameters()
         self._update_results()
@@ -162,7 +162,10 @@ class Controller:
         if path is None:
             self._on_save_file_as()
             return
-        data = self.model.serialize()
+        # hack to get parameters from case study from view
+        # (I know, it breaks MVC, to be changed later)
+        param = self.frame.case_studies.list_ctrl.get_parameters()
+        data = self.model.serialize(param)
         json = dumps(data, indent=2, ensure_ascii=False)
         with ZipFile(path, "w", compression=ZIP_DEFLATED) as file:
             file.writestr("data.json", json)
