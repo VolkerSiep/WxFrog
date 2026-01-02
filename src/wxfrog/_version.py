@@ -3,7 +3,7 @@ places as well."""
 
 MAJOR = 1  #: Major version
 MINOR = 0  #: Minor version
-FLAG = "alpha"  #: Version flag (None if release, else alpha or beta)
+FLAG = "beta"  #: Version flag (None if release, else alpha or beta)
 BUILD = 1  #: Build flag
 
 version = f"{MAJOR}.{MINOR}"

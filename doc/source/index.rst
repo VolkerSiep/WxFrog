@@ -21,9 +21,10 @@ The following features are **not** part of the scope:
 Content
 -------
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 2
 
    introduction
    manual
    configuration
+   release_notes
 

@@ -29,6 +29,13 @@ dependencies = [
     "Pypubsub"
 ]
 
+[project.urls]
+Homepage = "https://github.com/VolkerSiep/wxfrog"
+Documentation = "https://wxfrog.readthedocs.io/en/latest/"
+Repository = "https://github.com/VolkerSiep/wxfrog.git"
+Issues = "https://github.com/VolkerSiep/wxfrog/issues"
+Changelog = "https://wxfrog.readthedocs.io/en/latest/release_notes.html"
+
 [project.gui-scripts]
 wxfrog_hello_world = "wxfrog.examples.hello_world.gui:main"
 wxfrog_advanced = "wxfrog.examples.advanced.gui:main"
