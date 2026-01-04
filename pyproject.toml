@@ -5,9 +5,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "WxFrog"
-# read version from code
-dynamic = ["version"]
-
+version = "1.0b1"
 authors = [
     { name = "Volker Siepmann", email = "volker.siepmann@gmail.com" },
 ]

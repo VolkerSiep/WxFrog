@@ -15,7 +15,9 @@ sphinx:
 
 python:
   install:
-    - method: pip  # install package itself
+    - requirements: docs/requirements.txt
+    - method: pip
       path: .
-      extra_requirements:
-        - doc
+      # extra_requirements: []
+      # avoid trying to install wxpython
+      pip_install_arguments: ["--no-deps"]

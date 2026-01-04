@@ -1,23 +1,13 @@
 import sys
-from os.path import abspath
-from wxfrog import __version__ as _release
+from pathlib import Path
+from importlib.metadata import version as get_version
 
-# Configuration file for the Sphinx documentation builder.
-#
-# For the full list of built-in configuration values, see the documentation:
-# https://www.sphinx-doc.org/en/master/usage/configuration.html
-
-# -- Project information -----------------------------------------------------
-# https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
-
-
-# -- Path setup --------------------------------------------------------------
-sys.path.insert(0, abspath('.'))
+sys.path.insert(0, str(Path(__file__).parent))
 
 project = 'WxFrog'
-copyright = '2025, Volker Siepmann'
+copyright = '2026, Volker Siepmann'
 author = 'Volker Siepmann'
-release = _release
+release = get_version(project)
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -77,3 +67,14 @@ rst_epilog = r"""
 .. _Pint: https://pint.readthedocs.io
 .. _PyYAML: https://pyyaml.org/
 """
+
+autodoc_mock_imports = [
+    'wx',
+    'wx.core',
+    'wx.dataview',
+    'wx.html',
+    'wx.lib.mixins',
+    'wx.lib.rewevent'
+    'wx.ribbon',
+    'wx.svg',
+]

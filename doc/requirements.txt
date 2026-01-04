@@ -1,0 +1,8 @@
+pint
+pyyaml
+Pypubsub
+
+Sphinx
+docutils
+sphinxcontrib-bibtex
+sphinx-copybutton
