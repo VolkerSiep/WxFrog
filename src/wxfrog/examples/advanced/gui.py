@@ -72,7 +72,8 @@ class MyModel(CalculationEngine):
 
 def main():
     model = MyModel()
-    start_gui(files("wxfrog.examples.advanced.data"), model)
+    start_gui(files("wxfrog.examples.advanced.data"), model,
+              version="V3.14.159")
 
 if __name__ == '__main__':
     main()

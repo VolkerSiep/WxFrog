@@ -1,3 +1,4 @@
+from collections.abc import Mapping
 from copy import deepcopy
 from importlib.resources.abc import Traversable
 from pubsub import pub
@@ -15,8 +16,9 @@ from wxfrog.models.scenarios import SCENARIO_CURRENT, SCENARIO_CONVERGED
 
 
 class Controller:
-    def __init__(self, config_directory: Traversable, model: CalculationEngine):
-        self.configuration = Configuration(config_directory)
+    def __init__(self, config_directory: Traversable, model: CalculationEngine,
+                 data: Mapping[str, str]):
+        self.configuration = Configuration(config_directory, data)
         self._running = True  # initially busy with initialization
 
         # event subscriptions

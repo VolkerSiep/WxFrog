@@ -1,6 +1,6 @@
 from importlib.resources import as_file, read_binary
 from importlib.resources.abc import Traversable
-from collections.abc import Sequence
+from collections.abc import Sequence, Mapping
 from os import unlink
 from yaml import safe_load
 from pint.registry import Quantity
@@ -11,14 +11,29 @@ from .views.image import SVGImageWrap, PNGImageWrap
 
 CONFIG_FILENAME = "configuration.yml"
 
+REPLACE_PARAMETERS = ("app_name", "about")
 
 class Configuration(dict):
-    def __init__(self, config_dir: Traversable):
+    def __init__(self, config_dir: Traversable, data: Mapping[str, str]):
         self.config_dir = config_dir
+        self._data = data
         with as_file(config_dir.joinpath(CONFIG_FILENAME)) as path:
             with open(path) as file:
                 config = safe_load(file)
         super().__init__(config)
+
+    def __getitem__(self, key: str):
+        value = super().__getitem__(key)
+        if key in REPLACE_PARAMETERS:
+            for k, v in self._data.items():
+                value = value.replace(f"{{{k}}}", v)
+        return value
+
+    def get(self, key, default=None):
+        try:
+            return self[key]
+        except KeyError:
+            return default
 
     def get_image(self, name):
         ending = name.split(".")[-1].lower()
